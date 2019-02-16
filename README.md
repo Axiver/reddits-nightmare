@@ -4,7 +4,24 @@ This is a bot which may or may not contain spaghetti code which aims to repost t
 
 ## Getting started
 
-More info on that soon.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+
+### Prerequisites
+
+You need Nodejs and npm (which comes with nodejs) to use this bot.
+
+[Download Nodejs and npm](https://nodejs.org/en/)
+
+### Installing
+#### Node packages
+
+After downloading Nodejs and npm, install the [instagram-private-api](https://www.npmjs.com/package/instagram-private-api) package by running `npm install instagram-private-api`.
+
+#### Files
+
+You need to create a file called `account.json` in the `/bot/` folder, with the contents `{"username": "<username>", "password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
+
+After doing so, run `node beepboop.js` and the bot will do its thing.
 
 ## Contributing
 
@@ -12,8 +29,8 @@ Please read [CONTRIBUTING.md](Contributing.md) for details on our code of conduc
 
 ## Authors
 
-* **Garlicvideos** - *Initial work* - [Garlicvideos](https://github.com/Garlicvideos)
-* **KorkyMonster** - *God* - [KorkyMonster](https://github.com/KorkyMonster)
+* **Garlicvideos** - [Garlicvideos](https://github.com/Garlicvideos)
+* **KorkyMonster** - [KorkyMonster](https://github.com/KorkyMonster)
 
 See also the list of [contributors](https://github.com/Garlicvideos/reddits-nightmare/contributors) who participated in this project.
 
