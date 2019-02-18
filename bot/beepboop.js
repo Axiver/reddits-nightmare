@@ -2,13 +2,12 @@
 const request = require('request');
 const fs = require('fs');
 var path = require('path');
-var chokidar = require('chokidar');; //Detects /assets/images for new images
 
 //Variable Definitions
 var accdetails = require('./assets/account.json');
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
-    limit: 5 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
+    limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
 }
 
 //Initialize reddit api library
@@ -23,6 +22,7 @@ var Client = require('instagram-private-api').V1;
 var device = new Client.Device(accdetails["insta_username"]);
 var session;
 
+//Create directories if they don't exist
 if (!fs.existsSync('./cookies/')){
     fs.mkdirSync('./cookies/');
 }
@@ -35,24 +35,59 @@ if (!fs.existsSync('./assets/images/')){
     fs.mkdirSync('./assets/images/');
 }
 
+if (!fs.existsSync('./assets/images/approved')){
+    fs.mkdirSync('./assets/images/approved');
+}
+
+if (!fs.existsSync('./assets/images/nsfw')){
+    fs.mkdirSync('./assets/images/nsfw');
+}
+
+if (!fs.existsSync('./assets/images/rejected')){
+    fs.mkdirSync('./assets/images/rejected');
+}
+
+if (!fs.existsSync('./assets/images/uploaded')){
+    fs.mkdirSync('./assets/images/uploaded');
+}
+
+
 var storage = new Client.CookieFileStorage('./cookies/' + accdetails["insta_username"] + '.json');
 
 //Functions
-function formatFileName(postTitle, postUrl) {
+function formatFileName(postTitle, postUrl, nsfw) {
 	return new Promise(resolve => {
+		//Filter out bad reddit stuff
 		let forbiddenWords = ["reddit", "r/", "comments", "upvote", "downvote", "retweet", "mods"];
-		if (contains(postTitle, forbiddenWords)) {
-			//console.log("Post: " + postTitle + " is rejected");
-			return;
-		}
+		//Filter out bad characters
 		postTitle = postTitle.replace(/\?/g, "[q]");
 		postTitle = postTitle.replace(/\//g, "[s]");
 		postTitle = postTitle.replace(/\</g, "[l]");
 		postTitle = postTitle.replace(/\>/g, "[m]");
 		postTitle = postTitle.replace(/\"/g, "[quo]");
-		let filename = "./assets/images/" + postTitle + path.extname(postUrl);
+
+		let filename;
+		//Check if post is NSFW
+		if (nsfw == true) {
+	    	console.log("Found potentially NSFW post: " + postTitle);
+	    	filename = "./assets/images/nsfw/" + postTitle + path.extname(postUrl);
+	    } else if (contains(postTitle, forbiddenWords)) {
+			console.log("Post: " + postTitle + " is rejected");
+			filename = "./assets/images/rejected/" + postTitle + path.extname(postUrl);
+		} else if (fs.existsSync("./assets/images/uploaded/" + postTitle + path.extname(postUrl))) {
+			filename = "./assets/images/uploaded/" + postTitle + path.extname(postUrl);
+		} else {
+	    	filename = "./assets/images/approved/" + postTitle + path.extname(postUrl);
+	    }
 		resolve (filename);
 	});
+}
+
+function formatForInsta(dir) {
+	dir = dir.replace(".jpg", "");
+	dir = dir.replace(".jpeg", "");
+	dir = dir.replace(".png", "");
+	return dir;
 }
 
 function contains(target, pattern){
@@ -60,37 +95,36 @@ function contains(target, pattern){
     pattern.forEach(function(word){
       value = value + target.includes(word);
     });
-    return (value === 1)
+    return (value === 1);
 }
 
-async function download(url, postTitle) {
-	let filename = await formatFileName(postTitle, url);
-/*	request.head(url, function(err, res, body) {
-		if (fs.existsSync(filename)) {
-			fs.unlinkSync(filename);
-		}
-		var filetoPipe = fs.createWriteStream(filename);
-		filetoPipe.on('open', function() {
-			request(url).pipe(filetoPipe).on('close', function() {
-				filetoPipe.end();
-				//console.log("Downloaded: " + postTitle);
-			});
-		})
-	}); */
-	return new Promise(resolve => {
+async function download(url, postTitle, nsfw) {
+	/*return new Promise(resolve => {
+		let filename = await formatFileName(postTitle, url, nsfw);
 		request.head(url, function(err, res, body) {
-			if (fs.existsSync('./assets/images' + filename)) {
-				fs.unlink(filename);
-			}
+			if (fs.existsSync(filename))
+				fs.unlinkSync(filename);
 			var filetoPipe = fs.createWriteStream(filename);
 			filetoPipe.on('open', function() {
 				request(url).pipe(filetoPipe).on('close', function() {
 					filetoPipe.end();
-					//console.log("Downloaded: " + postTitle);
+					console.log("Downloaded: " + postTitle);
 				});
-			})
+			});
 		});
 		resolve (filename);
+	});*/
+	let filename = await formatFileName(postTitle, url, nsfw);
+		request.head(url, function(err, res, body) {
+		if (!fs.existsSync(filename)) {
+			var filetoPipe = fs.createWriteStream(filename);
+			filetoPipe.on('open', function() {
+				request(url).pipe(filetoPipe).on('close', function() {
+					filetoPipe.end();
+					console.log("Downloaded: " + postTitle);
+				});
+			});
+		}
 	});
 };
 
@@ -103,42 +137,46 @@ function isImage(url) {
 function snoopReddit(options) {
 	snooper.watcher.getListingWatcher('all', options).on('item', function(item) {
 	    if (item.kind = "t3" && isImage(item.data.url)) {
-			//console.log(item);
-		  	//let postUrl = item.data.url;
-		  	//let postTitle = item.data.title;
-		  	//let postID = item.data.id;
-			//download(item.data.url, postTitle);
-			postToInsta(item);
+		  	let postUrl = item.data.url;
+		  	let postTitle = item.data.title;
+		  	let postID = item.data.id;
+		  	let nsfw = item.data.over18;
+			download(postUrl, postTitle, nsfw);
 	    }
 	}).on('error', console.error);
 }
 
-
-//Watch /assets/images
-var watcher = chokidar.watch('./assets/images/', {
-	ignored: /^\./, persistent: true
-});
-
-watcher.on('add', function(path) {
-	console.log('File ', path, ' has been added');
-});
-
 //Login
 Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
 	session = result;
-	snoopReddit(options);
+	//Post to instagram every (1) minute
+	setTimeout(function() {
+		//Choose random image
+		var files = fs.readdirSync('./assets/images/approved/');
+		let post = files[Math.floor(Math.random() * files.length)];
+		if (post == undefined) {
+			console.log("No images to upload to instagram!");
+		} else {
+			caption = formatForInsta(post);
+			postToInsta(post, caption);
+		}
+	}, 6000);
 });
 
-function postToInsta(item) {
-	//Upload sample image
-	//Commented out for now so that it doesn't do it everytime on boot
-	download(item.data.url, item.data.title).then(function(filename) {
-	Client.Upload.photo(session, filename).then(function(upload) {
-	    //console.log(upload.params.uploadId);
-	    return Client.Media.configurePhoto(session, upload.params.uploadId, item.data.title);
+async function postToInsta(filename, caption) {
+	Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
+	    return Client.Media.configurePhoto(session, upload.params.uploadId, caption, function(err) {
+	    	if (err)
+	    		console.log(err);
+	    });
 	}).then(function(medium) {
-	    //Log post information to console (for dev stuff)
-	    //console.log(medium.params);
+		console.log("Uploaded image: " + caption + " to instagram");
+		fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
+			if (err)
+				console.log(err);
+		});
 	});
-});
 };
+
+//Start snooping
+snoopReddit(options);
