@@ -2,6 +2,7 @@
 const request = require('request');
 const fs = require('fs');
 var path = require('path');
+var chokidar = require('chokidar');; //Detects /assets/images for new images
 
 //Variable Definitions
 var accdetails = require('./assets/account.json');
@@ -30,8 +31,11 @@ function formatFileName(postTitle, postUrl) {
 			//console.log("Post: " + postTitle + " is rejected");
 			return;
 		}
-		postTitle = postTitle.replace(/\?/g, "[que]");
-		postTitle = postTitle.replace(/\//g, "[sla]");
+		postTitle = postTitle.replace(/\?/g, "[q]");
+		postTitle = postTitle.replace(/\//g, "[s]");
+		postTitle = postTitle.replace(/\</g, "[l]");
+		postTitle = postTitle.replace(/\>/g, "[m]");
+		postTitle = postTitle.replace(/\"/g, "[quo]");
 		let filename = "./assets/images/" + postTitle + path.extname(postUrl);
 		resolve (filename);
 	});
@@ -83,6 +87,15 @@ function snoopReddit(options) {
 }
 
 snoopReddit(options);
+
+//Watch /assets/images
+var watcher = chokidar.watch('./assets/images/', {
+	ignored: /^\./, persistent: true
+});
+
+watcher.on('add', function(path) {
+	console.log('File ', path, ' has been added');
+});
 
 //Login
 Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(session) {
