@@ -51,6 +51,10 @@ if (!fs.existsSync('./assets/images/uploaded')){
     fs.mkdirSync('./assets/images/uploaded');
 }
 
+if (!fs.existsSync('./assets/images/error')){
+    fs.mkdirSync('./assets/images/error');
+}
+
 
 var storage = new Client.CookieFileStorage('./cookies/' + accdetails["insta_username"] + '.json');
 
@@ -166,8 +170,13 @@ Client.Session.create(device, storage, accdetails["insta_username"], accdetails[
 async function postToInsta(filename, caption) {
 	Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
 	    return Client.Media.configurePhoto(session, upload.params.uploadId, caption, function(err) {
-	    	if (err)
+	    	if (err) {
 	    		console.log(err);
+	    		fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, function(err) {
+	    			if (err)
+	    				console.log(err);
+	    		});
+	    	}
 	    });
 	}).then(function(medium) {
 		console.log("Uploaded image: " + caption + " to instagram");
