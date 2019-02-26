@@ -2,6 +2,8 @@
 
 This is a bot which may or may not contain spaghetti code which aims to repost the top posts from [r/all](https://www.reddit.com/r/all/) to an instagram account as a experiment.
 
+**We are still in Development, so things are wonky**
+
 ## Getting started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
@@ -15,11 +17,16 @@ You need Nodejs and npm (which comes with nodejs) to use this bot.
 ### Installing
 #### Node packages
 
-After downloading Nodejs and npm, install the [instagram-private-api](https://www.npmjs.com/package/instagram-private-api) package by running `npm install instagram-private-api`.
+After downloading Nodejs and npm, install these packages:
+
+* [instagram-private-api](https://www.npmjs.com/package/instagram-private-api) by running `npm install instagram-private-api`
+* [reddit-snooper](https://www.npmjs.com/package/reddit-snooper) by running `npm install reddit-snooper`
+* [image-size](https://www.npmjs.com/package/image-size) by running `npm install image-size`
+* [aspect-ratio](https://www.npmjs.com/package/aspect-ratio) by running `npm install aspect-ratio`
 
 #### Files
 
-You need to create a file called `account.json` in the `/bot/` folder, with the contents `{"username": "<username>", "password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
+You need to create a file called `account.json` in the `/bot/assets/` folder, with the contents `{"username": "<username>", "password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
 
 After doing so, run `node beepboop.js` and the bot will do its thing.
 
