@@ -9,7 +9,7 @@ var ratio = require('aspect-ratio');
 var accdetails = require('./assets/account.json');
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
-    limit: 30 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
+    limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
 }
 let golbali = 0;
 
