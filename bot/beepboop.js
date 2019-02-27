@@ -128,6 +128,9 @@ function contains(target, pattern){
 
 //Downloads posts from reddit
 async function download(url, postTitle, nsfw) {
+	//Check length of post title
+	if (postTitle.length > 250)
+		return;
 	//Format the file name so that it can be stored in filesystem
 	let filename = await formatFileName(postTitle, url, nsfw);
 		request.head(url, function(err, res, body) {
@@ -213,9 +216,9 @@ function chooseInstaPhoto() {
 //Login
 Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
 	session = result;
-	//Post to instagram every (20) seconds
+	//Post to instagram every (15) minutes
 	//Development only. Change the time to something less frequent on production
-	setInterval(chooseInstaPhoto, 20000);
+	setInterval(chooseInstaPhoto, 300000);
 });
 
 //Post to instagram
