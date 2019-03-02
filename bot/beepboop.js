@@ -105,12 +105,12 @@ function formatForInsta(dir) {
 	dir = dir.replace(".png", "");
 
 	//Add back special characters
-	dir = dir.replace(/[q]/g, "?");
-	dir = dir.replace(/[s]/g, "/");
-	dir = dir.replace(/[l]/g, "<");
-	dir = dir.replace(/[m]/g, ">");
-	dir = dir.replace(/[quo]/g, "\"");
-	dir = dir.replace(/[st]/g, "*");
+	dir = dir.replace(/\[q\]/g, "?");
+	dir = dir.replace(/\[s\]/g, "/");
+	dir = dir.replace(/\[l\]/g, "<");
+	dir = dir.replace(/\[m\]/g, ">");
+	dir = dir.replace(/\[quo\]/g, "\"");
+	dir = dir.replace(/\[st\]/g, "*");
 
 	//Replaces "my" to "this"
 	dir = dir.replace(/my /g, "this ");
