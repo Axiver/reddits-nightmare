@@ -216,9 +216,8 @@ function chooseInstaPhoto() {
 //Login
 Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
 	session = result;
-	//Post to instagram every (15) minutes
-	//Development only. Change the time to something less frequent on production
-	setInterval(chooseInstaPhoto, 300000);
+	//Post to instagram every (10) minutes
+	setInterval(chooseInstaPhoto, 600000);
 });
 
 //Post to instagram
