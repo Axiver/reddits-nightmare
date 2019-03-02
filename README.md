@@ -30,6 +30,14 @@ You need to create a file called `account.json` in the `/bot/assets/` folder, wi
 
 After doing so, run `node beepboop.js` and the bot will do its thing.
 
+#### Choose the Subreddit
+
+If you want to change the default subreddit it gets the posts from, edit `all` in
+
+```snooper.watcher.getListingWatcher('all', options).on('item', function(item)```
+
+to whatever subreddit you want. Exclude the `r/` from the subreddit name.
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](Contributing.md) for details on our code of conduct, and the process for submitting pull requests to us.
