@@ -113,7 +113,7 @@ function formatForInsta(dir) {
 	dir = dir.replace(/[st]/g, "*");
 
 	//Replaces "my" to "this"
-	dir = dir.replace("my", "this");
+	dir = dir.replace(/my /g, "this ");
 
 	return dir;
 }
