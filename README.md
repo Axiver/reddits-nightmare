@@ -26,7 +26,7 @@ After downloading Nodejs and npm, install these packages:
 
 #### Files
 
-You need to create a file called `account.json` in the `/bot/assets/` folder, with the contents `{"username": "<username>", "password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
+You need to create a file called `account.json` in the `/bot/assets/` folder, with the contents `{"insta_username": "<username>", "insta_password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
 
 After doing so, run `node beepboop.js` and the bot will do its thing.
 
