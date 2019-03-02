@@ -2,7 +2,7 @@
 
 This is a bot which may or may not contain spaghetti code which aims to repost the top posts from [r/all](https://www.reddit.com/r/all/) to an instagram account as a experiment.
 
-**We are still in Development, so things are wonky**
+**Currently, the bot only reposts to instagram from r/all with some effort of excluding posts that may give away the fact that they are stolen from reddit. This is not perfect, but may come close to it in the future with more development.**
 
 ## Getting started
 
