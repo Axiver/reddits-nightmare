@@ -24,14 +24,41 @@ After downloading Nodejs and npm, install these packages:
 * [image-size](https://www.npmjs.com/package/image-size) by running `npm install image-size`
 * [aspect-ratio](https://www.npmjs.com/package/aspect-ratio) by running `npm install aspect-ratio`
 
-#### Files and Directories
+#### Setup
+##### Automated
 
-Run `node beepboop.js` and the bot will perform first time setup. The bot will ask you if you want to proceed with first time setup, where if you choose not to, you will be required to create `./configs/account.json` manually, unless the bot is ran again.
+Run `node beepboop.js` and the bot will perform first time setup. When the bot asks you if you want to use automated setup, type 'y' or 'yes'.
 
-If you allow it to proceed with setup, it will ask for Instagram account login details, which will then be stored locally into `./configs/account.json`
+It will ask for Instagram account login details, and after it is given the info, it will store them locally at `./configs/account.json`
 
-If required files are not present, the bot will commit sudoku.
-Missing directories will automatically be created by the bot.
+The bot will then ask you to whitelist subreddits. This part is important as broken subreddits can cause the bot to crash.
+
+When prompted, type in the subreddits, without the `r/`, that you want the bot to browse. Single subreddits like `r/all` works too. Any subreddits that are below 2 characters long will be fixed automatically. You should end up with something like this:
+
+`What subreddit(s) do you want to whitelist?`
+`(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)`
+`dankmemes,memes,aww`
+
+Ensure that the subreddit you enter actually exists on Reddit, or you will be required to modify/delete `subreddits.txt` on your own to fix the bot.
+
+##### Manual
+
+Setting up manually is highly disencouraged as human error will likely occur.
+Anyways, here are the instructions:
+
+Create the folder `/configs/` in the same directory as where `beepboop.js` is. In `/configs/`, create two files, naming them `account.json` and `subreddits.txt` respectively.
+
+In `account.json`, copy and paste this in: `{"insta_username": "username", "insta_password": "password"}`, replacing `username` and `password` with your own.
+
+In `subreddits.txt`, type in the subreddits you wish the bot to browse, without `r/` in front of it, seperating them with a comma.
+E.g. `subreddits.txt` would contain `dankmemes,memes,aww`
+
+Afterwards, run `beepboop.js` and the bot will create the rest of the needed directories for you.
+
+#### Modification of files
+
+`account.json` and `subreddits.txt` is open for modification in case you entered any info wrongly.
+To fix either of the files, simply delete it and follow the steps [shown above here](#setup), for the file again.
 
 ## Contributing
 

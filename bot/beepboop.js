@@ -132,9 +132,56 @@ function checkRatio(aspectRatio) {
 	}
 }
 
+//Fixes invalid subreddits
+async function fixSubreddits(array) {
+	return new Promise(function(resolve, reject) {
+		let i = -1;
+		array.forEach(function(element) {
+			i++;
+			if (element.length < 2) {
+				console.log("Found a subreddit that does not reach the 2 character minimum, fixing...");
+				array.splice(i, 1, '');
+			}
+		});
+		array = array.filter(Boolean);
+		array = array.join(',');
+		resolve(array);
+	});
+}
+
+//Strings subreddits from config into a searchable URL
+async function stringSubreddits() {
+	return new Promise(function(resolve, reject) {
+		if (!fs.existsSync("./configs/subreddits.txt")) {
+			console.log("Subreddit config file does not exist, defaulting to r/all.");
+			fs.writeFile("./configs/subreddits.txt", "all", function() {
+				console.log("Created missing file 'subreddits.txt' in './configs'");
+			});
+		} else {
+			fs.readFile('./configs/subreddits.txt', "utf8", async function(err, data) {
+				if (data == '') {
+					data = "all";
+					console.log("Subreddit list is empty, defaulting to r/all.")
+					fs.writeFile("./configs/subreddits.txt", "all", function() {});
+				}
+				let array = data.split(",");
+				let content = await fixSubreddits(array);
+				if (content != data) {
+					fs.writeFile("./configs/subreddits.txt", content, function() {
+						console.log("Fixed the subreddit list");
+					});
+				}
+			    content = content.replace(/,/g, '+');
+			    resolve(content);
+			});
+		}
+	});
+}
+
 //Searches reddit for posts to download
-function snoopReddit(options) {
-	snooper.watcher.getListingWatcher('all', options).on('item', function(item) {
+async function snoopReddit(options) {
+	subreddits = await stringSubreddits();
+	snooper.watcher.getListingWatcher(subreddits, options).on('item', function(item) {
 		//If post is a image and has a supported file format
 	    if (item.kind = "t3" && isImage(item.data.url)) {
 		  	let postUrl = item.data.url;
@@ -207,19 +254,48 @@ async function firstSetup() {
 			//Function for asking the question
 			function recursiveAsyncReadLine() {
 			  	rl.question('', function (answer) {
+			  		rl.pause();
 			    if (answer == "y" || answer == "yes") {
 			    	console.log("What is your Instagram account username?");
+			    	rl.resume();
 			    	rl.question('', function (answer) {
+			    		rl.pause();
 			    		let acc_username = answer;
 			    		console.log("What is the password associated with the Instagram account '" + acc_username + "'?")
+			    		rl.resume();
 			    		rl.question('', function (answer) {
+			    			rl.pause();
 			    			let acc_password = answer;
-			    			rl.close();
 			    			let contents = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"}';
+			    			if (!fs.existsSync("./configs"))
+			    				fs.mkdirSync("./configs");
 			    			fs.writeFile("./configs/account.json", contents, function(err) {
+			    				if (err)
+			    					console.log(err);
 			    				console.log("Created account.json containing login details");
-			    				console.log("First time setup complete");
-			    				resolve();
+			    				if (!fs.existsSync("./configs/subreddits.txt")) {
+			    					console.log("What subreddit(s) do you want to whitelist?");
+			    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
+			    					rl.resume();
+			    					rl.question('', function (answer) {
+			    						rl.pause();
+			    						if (answer.includes("r/")) {
+			    							console.log("Hey I said no 'r/'s >:(");
+			    							console.log("I'll fix that for you tho, no worries");
+			    							answer = answer.replace(/r\//g, '');
+			    						}
+			    						answer = answer.replace(/ /g, '');
+			    						rl.close();
+			    						fs.writeFile("./configs/subreddits.txt", answer, function(err) {
+											console.log("First time setup complete");
+			    							resolve();
+										});
+			    					});
+			    				} else {
+			    					console.log("First time setup complete");
+			    					rl.close();
+			    					resolve();
+			    				}
 			    			});
 			    		});
 			    	});
