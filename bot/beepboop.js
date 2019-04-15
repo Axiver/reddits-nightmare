@@ -6,12 +6,14 @@ var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
 
 //Variable declarations
-var accdetails = require('./assets/account.json');
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
 }
 let golbali = 0;
+
+//List of needed directories
+let directories = ["./configs", "./cookies", "./assets", "./assets/images", "./assets/images/approved", "./assets/images/nsfw", "./assets/images/rejected", "./assets/images/uploaded", "./assets/images/error"];
 
 //Initialize reddit api library
 var Snooper = require('reddit-snooper');
@@ -22,44 +24,7 @@ snooper = new Snooper({
 
 //Initialize instagram library
 var Client = require('instagram-private-api').V1;
-var device = new Client.Device(accdetails["insta_username"]);
 var session;
-
-//Create directories if they don't exist
-if (!fs.existsSync('./cookies/')){
-    fs.mkdirSync('./cookies/');
-}
-
-if (!fs.existsSync('./assets/')){
-    fs.mkdirSync('./assets/');
-}
-
-if (!fs.existsSync('./assets/images/')){
-    fs.mkdirSync('./assets/images/');
-}
-
-if (!fs.existsSync('./assets/images/approved')){
-    fs.mkdirSync('./assets/images/approved');
-}
-
-if (!fs.existsSync('./assets/images/nsfw')){
-    fs.mkdirSync('./assets/images/nsfw');
-}
-
-if (!fs.existsSync('./assets/images/rejected')){
-    fs.mkdirSync('./assets/images/rejected');
-}
-
-if (!fs.existsSync('./assets/images/uploaded')){
-    fs.mkdirSync('./assets/images/uploaded');
-}
-
-if (!fs.existsSync('./assets/images/error')){
-    fs.mkdirSync('./assets/images/error');
-}
-
-
-var storage = new Client.CookieFileStorage('./cookies/' + accdetails["insta_username"] + '.json');
 
 //Functions
 
@@ -213,33 +178,116 @@ function chooseInstaPhoto() {
 	}
 }
 
-//Login
-Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
-	session = result;
-	//Post to instagram every (15) minutes
-	//Development only. Change the time to something less frequent on production
-	setInterval(chooseInstaPhoto, 300000);
-});
-
-//Post to instagram
-async function postToInsta(filename, caption) {
-	Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
-    	Client.Media.configurePhoto(session, upload.params.uploadId, caption).then(function(medium) {
-			console.log("Uploaded image: \"" + caption + "\" to instagram");
-			fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
-				if (err)
-					console.log(err);
-			});
-		}).catch(function(err) {
-    		fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, function(err) {
-				if (err)
-					console.log(err);
-				console.log("Image \"" + filename + "\" is bad");
-				return;
-			});
-    	});
+//Create directories if they don't exist
+async function makeDirs() {
+	return new Promise(function(resolve, reject) {
+		directories.forEach(function(element) {
+			if (!fs.existsSync(element)) {
+			    fs.mkdirSync(element);
+			    console.log("Created missing directory:" + element);
+			}
+		});
+		resolve();
 	});
-};
+}
 
-//Start snooping
-snoopReddit(options);
+//Perform first time setup if haven't already
+async function firstSetup() {
+	return new Promise(function(resolve, reject) {
+		if (!fs.existsSync("./configs/account.json")) {
+			console.log("Performing first time setup...");
+			//Get account info to create config file for it
+			console.log("Requesting for login details...");
+			//Hook to console
+			var readline = require('readline');
+			var rl = readline.createInterface({
+			  	input: process.stdin,
+			  	output: process.stdout
+			});
+			//Function for asking the question
+			function recursiveAsyncReadLine() {
+			  	rl.question('', function (answer) {
+			    if (answer == "y" || answer == "yes") {
+			    	console.log("What is your Instagram account username?");
+			    	rl.question('', function (answer) {
+			    		let acc_username = answer;
+			    		console.log("What is the password associated with the Instagram account '" + acc_username + "'?")
+			    		rl.question('', function (answer) {
+			    			let acc_password = answer;
+			    			rl.close();
+			    			let contents = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"}';
+			    			fs.writeFile("./configs/account.json", contents, function(err) {
+			    				console.log("Created account.json containing login details");
+			    				console.log("First time setup complete");
+			    				resolve();
+			    			});
+			    		});
+			    	});
+			    } else if (answer == "n" || answer == "no") {
+			    	console.log("Alright, but you need to create account.json yourself or the bot will refuse to start.");
+			    	console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare for more information.");
+			    	rl.close();
+			    	resolve();
+			    } else {
+			    	console.log("Please enter a valid response.");
+			    	recursiveAsyncReadLine(); //Calling this function again to ask new question
+			    }
+			  	});
+			};
+			console.log("Would you like to automatically configure the config file? (You will have to do this manually if you answer no) [y/n]");
+			recursiveAsyncReadLine();
+		} else {
+			resolve();
+		}
+	});
+}
+
+//Everything important is in this function
+//I know this portion looks pretty readable, but once you start reading the functions we're awaiting for here
+//You will wonder how this managed to run and trust me, I don't know either.
+async function callEverything() {
+	await firstSetup();
+	//Exit if the account details aren't there
+	if (!fs.existsSync("./configs/account.json")) {
+		console.log("You need to put your Instagram login details in account.json at ./configs/ for the bot to start");
+		process.exit();
+	}
+	//Create directories if they don't exist
+	await makeDirs();
+	//Finish loading everything needed for Instagram
+	var accdetails = require('./configs/account.json');
+	var device = new Client.Device(accdetails["insta_username"]);
+	var storage = new Client.CookieFileStorage('./cookies/' + accdetails["insta_username"] + '.json');
+	//Login to Instagram
+	Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
+		session = result;
+		//Post to instagram every (15) minutes
+		//Development only. Change the time to something less frequent on production
+		setInterval(chooseInstaPhoto, 300000);
+	});
+
+	//Post to instagram
+	async function postToInsta(filename, caption) {
+		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
+	    	Client.Media.configurePhoto(session, upload.params.uploadId, caption).then(function(medium) {
+				console.log("Uploaded image: \"" + caption + "\" to instagram");
+				fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
+					if (err)
+						console.log(err);
+				});
+			}).catch(function(err) {
+	    		fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, function(err) {
+					if (err)
+						console.log(err);
+					console.log("Image \"" + filename + "\" is bad");
+					return;
+				});
+	    	});
+		});
+	};
+	//Start snooping
+	snoopReddit(options);
+}
+
+//Start the script
+callEverything();
