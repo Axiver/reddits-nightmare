@@ -24,11 +24,14 @@ After downloading Nodejs and npm, install these packages:
 * [image-size](https://www.npmjs.com/package/image-size) by running `npm install image-size`
 * [aspect-ratio](https://www.npmjs.com/package/aspect-ratio) by running `npm install aspect-ratio`
 
-#### Files
+#### Files and Directories
 
-You need to create a file called `account.json` in the `/bot/assets/` folder, with the contents `{"insta_username": "<username>", "insta_password": "<password>"}`, replacing `<username>` and `<password>` with the login credentials to the Instagram account you intend to use this on.
+Run `node beepboop.js` and the bot will perform first time setup. The bot will ask you if you want to proceed with first time setup, where if you choose not to, you will be required to create `./configs/account.json` manually, unless the bot is ran again.
 
-After doing so, run `node beepboop.js` and the bot will do its thing.
+If you allow it to proceed with setup, it will ask for Instagram account login details, which will then be stored locally into `./configs/account.json`
+
+If required files are not present, the bot will commit sudoku.
+Missing directories will automatically be created by the bot.
 
 ## Contributing
 
