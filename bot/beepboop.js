@@ -193,38 +193,6 @@ async function snoopReddit(options) {
 	}).on('error', console.error);
 }
 
-//Chooses a photo randomly from /images/approved and posts it to ig
-function chooseInstaPhoto() {
-	//Choose random image
-	var files = fs.readdirSync('./assets/images/approved/');
-	let post = files[Math.floor(Math.random() * files.length)];
-	if (post == undefined) {
-		console.log("No images to upload to instagram!");
-	} else {
-		caption = formatForInsta(post);
-		sizeOf("./assets/images/approved/" + post, function (err, dimensions) {
-			if (err) {
-				console.log(err);
-				return;
-			}
-			//Check aspect ratio of image before it reaches instagram
-			//Even though there is a catch at the part where it uploads to catch this,
-			//It is a good idea to catch it here first before it reaches their servers to
-			//Prevent them from detecting us as a bot
-			let aspectRatio = ratio(dimensions.width, dimensions.height);
-			if (checkRatio(aspectRatio)) {
-				postToInsta(post, caption);
-			} else {
-				fs.rename("./assets/images/approved/" + post, "./assets/images/error/" + post, function(err) {
-					if (err)
-						console.log(err);
-					console.log("Aspect ratio of \"" + post + "\" is bad");
-				});
-			}
-		});
-	}
-}
-
 //Create directories if they don't exist
 async function makeDirs() {
 	return new Promise(function(resolve, reject) {
@@ -341,6 +309,38 @@ async function callEverything() {
 		//Development only. Change the time to something less frequent on production
 		setInterval(chooseInstaPhoto, 300000);
 	});
+
+	//Chooses a photo randomly from /images/approved and posts it to ig
+	function chooseInstaPhoto() {
+		//Choose random image
+		var files = fs.readdirSync('./assets/images/approved/');
+		let post = files[Math.floor(Math.random() * files.length)];
+		if (post == undefined) {
+			console.log("No images to upload to instagram!");
+		} else {
+			caption = formatForInsta(post);
+			sizeOf("./assets/images/approved/" + post, function (err, dimensions) {
+				if (err) {
+					console.log(err);
+					return;
+				}
+				//Check aspect ratio of image before it reaches instagram
+				//Even though there is a catch at the part where it uploads to catch this,
+				//It is a good idea to catch it here first before it reaches their servers to
+				//Prevent them from detecting us as a bot
+				let aspectRatio = ratio(dimensions.width, dimensions.height);
+				if (checkRatio(aspectRatio)) {
+					postToInsta(post, caption);
+				} else {
+					fs.rename("./assets/images/approved/" + post, "./assets/images/error/" + post, function(err) {
+						if (err)
+							console.log(err);
+						console.log("Aspect ratio of \"" + post + "\" is bad");
+					});
+				}
+			});
+		}
+	}
 
 	//Post to instagram
 	async function postToInsta(filename, caption) {
