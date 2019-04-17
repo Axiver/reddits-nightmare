@@ -234,37 +234,36 @@ async function firstSetup() {
 			    		rl.question('', function (answer) {
 			    			rl.pause();
 			    			let acc_password = answer;
-			    			let contents = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"}';
+			    			let logindetails = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"}';
 			    			if (!fs.existsSync("./configs"))
 			    				fs.mkdirSync("./configs");
-			    			fs.writeFile("./configs/account.json", contents, function(err) {
-			    				if (err)
-			    					console.log(err);
-			    				console.log("Created account.json containing login details");
-			    				if (!fs.existsSync("./configs/subreddits.txt")) {
-			    					console.log("What subreddit(s) do you want to whitelist?");
-			    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
-			    					rl.resume();
-			    					rl.question('', function (answer) {
-			    						rl.pause();
-			    						if (answer.includes("r/")) {
-			    							console.log("Hey I said no 'r/'s >:(");
-			    							console.log("I'll fix that for you tho, no worries");
-			    							answer = answer.replace(/r\//g, '');
-			    						}
-			    						answer = answer.replace(/ /g, '');
-			    						rl.close();
+		    				if (!fs.existsSync("./configs/subreddits.txt")) {
+		    					console.log("What subreddit(s) do you want to whitelist?");
+		    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
+		    					rl.resume();
+		    					rl.question('', function (answer) {
+		    						rl.pause();
+		    						if (answer.includes("r/")) {
+		    							console.log("Hey I said no 'r/'s >:(");
+		    							console.log("I'll fix that for you tho, no worries");
+		    							answer = answer.replace(/r\//g, '');
+		    						}
+		    						answer = answer.replace(/ /g, '');
+		    						rl.close();
+		    						fs.writeFile("./configs/account.json", logindetails, function(err) {
+		    							console.log("Created account.json containing login details");
 			    						fs.writeFile("./configs/subreddits.txt", answer, function(err) {
+			    							console.log("Created subreddits.txt containing a list of subreddits to read from.");
 											console.log("First time setup complete");
 			    							resolve();
 										});
 			    					});
-			    				} else {
-			    					console.log("First time setup complete");
-			    					rl.close();
-			    					resolve();
-			    				}
-			    			});
+		    					});
+		    				} else {
+		    					console.log("First time setup complete");
+		    					rl.close();
+		    					resolve();
+		    				}
 			    		});
 			    	});
 			    } else if (answer == "n" || answer == "no") {

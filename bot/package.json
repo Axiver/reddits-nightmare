@@ -1,0 +1,35 @@
+{
+  "name": "reddits-nightmare",
+  "version": "1.0.0",
+  "description": "Modules required for this really boopity boi",
+  "main": "beepboop.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Garlicvideos/reddits-nightmare.git"
+  },
+  "keywords": [
+    "reddit",
+    "nightmare",
+    "instagram",
+    "bot",
+    "automatic",
+    "filter",
+    "normies",
+    "memes"
+  ],
+  "author": "Garlicvideos",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Garlicvideos/reddits-nightmare/issues"
+  },
+  "homepage": "https://github.com/Garlicvideos/reddits-nightmare#readme",
+  "dependencies": {
+    "aspect-ratio": "^2.0.3",
+    "image-size": "^0.7.3",
+    "instagram-private-api": "^0.10.1",
+    "reddit-snooper": "^1.0.1"
+  }
+}

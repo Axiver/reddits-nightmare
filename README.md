@@ -1,8 +1,8 @@
 # reddits-nightmare
 
-This is a bot which may or may not contain spaghetti code which aims to repost the top posts from [r/all](https://www.reddit.com/r/all/) to an instagram account as a experiment.
+This is a bot which may or may not contain spaghetti code which aims to repost the hot posts from any subreddit I want to an instagram account as a experiment.
 
-**Currently, the bot only reposts to instagram from r/all with some effort of excluding posts that may give away the fact that they are stolen from reddit. This is not perfect, but may come close to it in the future with more development.**
+**This bot has the ability to repost hot posts from any subreddit you want, to any Instagram account you want. It will attempt to remove the fact that it's stealing from reddit, and while it is not perfect, it may come close to it in the near future with more development.**
 
 ## Getting started
 
@@ -17,12 +17,7 @@ You need Nodejs and npm (which comes with nodejs) to use this bot.
 ### Installing
 #### Node packages
 
-After downloading Nodejs and npm, install these packages:
-
-* [instagram-private-api](https://www.npmjs.com/package/instagram-private-api) by running `npm install instagram-private-api`
-* [reddit-snooper](https://www.npmjs.com/package/reddit-snooper) by running `npm install reddit-snooper`
-* [image-size](https://www.npmjs.com/package/image-size) by running `npm install image-size`
-* [aspect-ratio](https://www.npmjs.com/package/aspect-ratio) by running `npm install aspect-ratio`
+After downloading Nodejs and npm, `cd` into the directory you installed the bot to and run `npm i`. It should automatically install all the needed modules for this bot to work.
 
 #### Setup
 ##### Automated
@@ -33,7 +28,7 @@ It will ask for Instagram account login details, and after it is given the info,
 
 The bot will then ask you to whitelist subreddits. This part is important as broken subreddits can cause the bot to crash.
 
-When prompted, type in the subreddits, without the `r/`, that you want the bot to browse. Single subreddits like `r/all` works too. Any subreddits that are below 2 characters long will be fixed automatically. You should end up with something like this:
+When prompted, type in the subreddits, without the `r/`, that you want the bot to browse. Single subreddits like `r/all` works too. Any subreddits that are below 2 characters long will be fixed automatically. Your console should end up with something like this:
 
 `What subreddit(s) do you want to whitelist?`
 `(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)`
