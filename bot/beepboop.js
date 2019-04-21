@@ -6,7 +6,7 @@ var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
 
 //Variable declarations
-var customcaption = "<custom caption here>";
+var customcaption = "<caption>";
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
@@ -132,16 +132,15 @@ async function autoHashtag(caption, wordpos, config) {
 					for (var i=0;i<adjective.length;i++) {
 					    adjective[i]="#"+adjective[i];
 					}
-					customcaption += nouns.join(" ");
-					customcaption += " ";
-					customcaption += adjective.join(" ");
-					console.log(customcaption);
-					resolve();
+					let editedcaption = customcaption + nouns.join(" ");
+					editedcaption += " ";
+					editedcaption += adjective.join(" ");
+					resolve(editedcaption);
 				});
 			});
 		} else {
 			console.log("Your account.json file is broken. Please delete it and rerun the bot.");
-			resolve();
+			resolve(customcaption);
 		}
 	});
 }
@@ -397,8 +396,8 @@ async function callEverything() {
 	//Post to instagram
 	async function postToInsta(filename, caption) {
 		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(async function(upload) {
-			await autoHashtag(caption, wordpos, accdetails["autohashtags"]);
-			let fakecaption = caption+customcaption;
+			let usercaption = await autoHashtag(caption, wordpos, accdetails["autohashtags"]);
+			let fakecaption = caption + usercaption;
 	    	Client.Media.configurePhoto(session, upload.params.uploadId, fakecaption).then(function(medium) {
 				console.log("Uploaded image: \"" + caption + "\" to instagram");
 				fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
