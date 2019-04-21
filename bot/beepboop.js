@@ -6,6 +6,7 @@ var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
 
 //Variable declarations
+var customcaption = "<custom caption here>";
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
@@ -21,6 +22,10 @@ snooper = new Snooper({
     automatic_retries: true, // automatically handles condition when reddit says 'you are doing this too much'
     api_requests_per_minute: 60 // api requests will be spread out in order to play nicely with Reddit
 });
+
+//Initialize WordPOS library
+var WordPOS = require('wordpos'),
+    wordpos = new WordPOS();
 
 //Initialize instagram library
 var Client = require('instagram-private-api').V1;
@@ -110,6 +115,36 @@ async function download(url, postTitle, nsfw) {
 		}
 	});
 };
+
+//Takes nouns from the caption and makes them hashtags
+async function autoHashtag(caption, wordpos, config) {
+	return new Promise(resolve => {
+		if (config != "yes")
+			resolve();
+		else if (config == "yes") {
+			wordpos.getNouns(caption, function(result) {
+				let nouns = result;
+				wordpos.getAdjectives(caption, function(result) {
+					let adjective = result;
+					for (var i=0;i<nouns.length;i++) {
+					    nouns[i]="#"+nouns[i];
+					}
+					for (var i=0;i<adjective.length;i++) {
+					    adjective[i]="#"+adjective[i];
+					}
+					customcaption += nouns.join(" ");
+					customcaption += " ";
+					customcaption += adjective.join(" ");
+					console.log(customcaption);
+					resolve();
+				});
+			});
+		} else {
+			console.log("Your account.json file is broken. Please delete it and rerun the bot.");
+			resolve();
+		}
+	});
+}
 
 //Checks image url for file format
 function isImage(url) {
@@ -223,6 +258,7 @@ async function firstSetup() {
 			function recursiveAsyncReadLine() {
 			  	rl.question('', function (answer) {
 			  		rl.pause();
+			  	answer = answer.toLowerCase();
 			    if (answer == "y" || answer == "yes") {
 			    	console.log("What is your Instagram account username?");
 			    	rl.resume();
@@ -234,36 +270,53 @@ async function firstSetup() {
 			    		rl.question('', function (answer) {
 			    			rl.pause();
 			    			let acc_password = answer;
-			    			let logindetails = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"}';
-			    			if (!fs.existsSync("./configs"))
-			    				fs.mkdirSync("./configs");
-		    				if (!fs.existsSync("./configs/subreddits.txt")) {
-		    					console.log("What subreddit(s) do you want to whitelist?");
-		    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
-		    					rl.resume();
-		    					rl.question('', function (answer) {
-		    						rl.pause();
-		    						if (answer.includes("r/")) {
-		    							console.log("Hey I said no 'r/'s >:(");
-		    							console.log("I'll fix that for you tho, no worries");
-		    							answer = answer.replace(/r\//g, '');
-		    						}
-		    						answer = answer.replace(/ /g, '');
-		    						rl.close();
-		    						fs.writeFile("./configs/account.json", logindetails, function(err) {
-		    							console.log("Created account.json containing login details");
-			    						fs.writeFile("./configs/subreddits.txt", answer, function(err) {
-			    							console.log("Created subreddits.txt containing a list of subreddits to read from.");
-											console.log("First time setup complete");
-			    							resolve();
-										});
+			    			let logindetails = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"';
+    						console.log("Would you like the bot to automatically generate hashtags for you? [y/cancel]");
+    						rl.resume();
+    						rl.question('', function (answer) {
+    							rl.pause();
+    							answer = answer.toLowerCase();
+    							if (answer == "y" || answer == "yes") {
+    								logindetails += ", \"autohashtags\": \"yes\"}";
+    							} else {
+    								logindetails += ", \"autohashtags\": \"no\"}";
+    							}
+    							if (!fs.existsSync("./configs/subreddits.txt")) {
+	    							console.log("What subreddit(s) do you want to whitelist?");
+			    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
+			    					rl.resume();
+			    					rl.question('', function (answer) {
+			    						rl.pause();
+			    						if (answer.includes("r/")) {
+			    							console.log("Hey I said no 'r/'s >:(");
+			    							console.log("I'll fix that for you tho, no worries");
+			    							answer = answer.replace(/r\//g, '');
+			    						}
+			    						subreddits = answer.replace(/ /g, '');
+			    						if (!fs.existsSync("./configs")) {
+				    						fs.mkdirSync("./configs");
+				    						console.log("Created missing directory: ./configs")
+			    						}
+			    						rl.close();
+			    						fs.writeFile("./configs/account.json", logindetails, function(err) {
+			    							console.log("Created account.json containing login details");
+			    							console.log("Appended account.json with autohashtag config");
+				    						fs.writeFile("./configs/subreddits.txt", subreddits, function(err) {
+				    							console.log("Created subreddits.txt containing a list of subreddits to read from.");
+												console.log("First time setup complete");
+				    							resolve();
+											});
+				    					});
 			    					});
-		    					});
-		    				} else {
-		    					console.log("First time setup complete");
-		    					rl.close();
-		    					resolve();
-		    				}
+			    				} else {
+			    					fs.writeFile("./configs/account.json", logindetails, function(err) {
+			    						console.log("Created account.json containing login details");
+			    						console.log("First time setup complete");
+			    						rl.close();
+			    						resolve();
+			    					});
+			    				}
+	    					});
 			    		});
 			    	});
 			    } else if (answer == "n" || answer == "no") {
@@ -343,8 +396,10 @@ async function callEverything() {
 
 	//Post to instagram
 	async function postToInsta(filename, caption) {
-		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
-	    	Client.Media.configurePhoto(session, upload.params.uploadId, caption).then(function(medium) {
+		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(async function(upload) {
+			await autoHashtag(caption, wordpos, accdetails["autohashtags"]);
+			let fakecaption = caption+customcaption;
+	    	Client.Media.configurePhoto(session, upload.params.uploadId, fakecaption).then(function(medium) {
 				console.log("Uploaded image: \"" + caption + "\" to instagram");
 				fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
 					if (err)
@@ -362,6 +417,8 @@ async function callEverything() {
 	};
 	//Start snooping
 	snoopReddit(options);
+
+	chooseInstaPhoto();
 }
 
 //Start the script
