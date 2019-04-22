@@ -137,7 +137,7 @@ async function filterAdjectives(nouns, adjective) {
 			} else {
 		    	adjective[i]="#"+adjective[i];
 		    	if (nouns.includes(adjective[i]))
-		    		adjective = adjective.splice(adjective[i], 1);
+		    		adjective.splice(adjective[i], 1);
 			}
 		}
 		resolve(adjective);
