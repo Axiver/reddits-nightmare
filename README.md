@@ -57,14 +57,6 @@ To add in your custom captions, open up `beepboop.js` and edit `var customcaptio
 `account.json` and `subreddits.txt` is open for modification in case you entered any info wrongly.
 To fix either of the files, simply delete it and follow the steps [shown above here](#setup), for the file again.
 
-#### Choose the Subreddit
-
-If you want to change the default subreddit it gets the posts from, edit `all` in
-
-```snooper.watcher.getListingWatcher('all', options).on('item', function(item)```
-
-to whatever subreddit you want. Exclude the `r/` from the subreddit name.
-
 ## Contributing
 
 Please read [CONTRIBUTING.md](Contributing.md) for details on our code of conduct, and the process for submitting pull requests to us.
