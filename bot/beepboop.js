@@ -263,23 +263,6 @@ async function makeDirs() {
 	});
 }
 
-<<<<<<< HEAD
-//Login
-Client.Session.create(device, storage, accdetails["insta_username"], accdetails["insta_password"]).then(function(result) {
-	session = result;
-	//Post to instagram every (10) minutes
-	setInterval(chooseInstaPhoto, 600000);
-});
-
-//Post to instagram
-async function postToInsta(filename, caption) {
-	Client.Upload.photo(session, "./assets/images/approved/" + filename).then(function(upload) {
-    	Client.Media.configurePhoto(session, upload.params.uploadId, caption).then(function(medium) {
-			console.log("Uploaded image: \"" + caption + "\" to instagram");
-			fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function(err) {
-				if (err)
-					console.log(err);
-=======
 //Perform first time setup if haven't already
 //This function is a mess but at least it works I guess...
 async function firstSetup() {
@@ -293,7 +276,6 @@ async function firstSetup() {
 			var rl = readline.createInterface({
 			  	input: process.stdin,
 			  	output: process.stdout
->>>>>>> develop
 			});
 			//Function for asking the question
 			function recursiveAsyncReadLine() {
