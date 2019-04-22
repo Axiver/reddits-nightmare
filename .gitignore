@@ -1,4 +1,6 @@
 /bot/node_modules
 /bot/cookies/gitgagged.json
-/bot/assets/account.json
 /bot/assets/images/*
+/bot/configs/account.json
+/bot/cookies/g.json
+/bot/configs/
