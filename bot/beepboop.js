@@ -116,26 +116,49 @@ async function download(url, postTitle, nsfw) {
 	});
 };
 
+async function filterNouns(nouns) {
+	return new Promise(resolve => {
+		for (var i=0;i<nouns.length;i++) {
+			if (nouns[i].length < 3) {
+				nouns.splice(nouns[i], 1);
+			} else {
+		    	nouns[i]="#"+nouns[i];
+			}
+		}
+		resolve(nouns);
+	});
+}
+
+async function filterAdjectives(nouns, adjective) {
+	return new Promise(resolve => {
+		for (var i=0;i<adjective.length;i++) {
+			if (adjective[i].length < 3) {
+				adjective.splice(adjective[i], 1);
+			} else {
+		    	adjective[i]="#"+adjective[i];
+		    	if (nouns.includes(adjective[i]))
+		    		adjective = adjective.splice(adjective[i], 1);
+			}
+		}
+		resolve(adjective);
+	});
+}
+
 //Takes nouns from the caption and makes them hashtags
+//Will optimize sometime later
 async function autoHashtag(caption, wordpos, config) {
 	return new Promise(resolve => {
 		if (config != "yes")
 			resolve();
 		else if (config == "yes") {
-			wordpos.getNouns(caption, function(result) {
-				let nouns = result;
-				wordpos.getAdjectives(caption, function(result) {
-					let adjective = result;
-					for (var i=0;i<nouns.length;i++) {
-					    nouns[i]="#"+nouns[i];
-					}
-					for (var i=0;i<adjective.length;i++) {
-					    adjective[i]="#"+adjective[i];
-					}
-					let editedcaption = customcaption + nouns.join(" ");
+			wordpos.getNouns(caption, async function(result) {
+				let nouns = await filterNouns(result);
+				wordpos.getAdjectives(caption, async function(result) {
+					let adjective = await filterAdjectives(nouns, result);
+					let editedcaption = nouns.join(" ");
 					editedcaption += " ";
 					editedcaption += adjective.join(" ");
-					resolve(editedcaption);
+					resolve(customcaption + editedcaption);
 				});
 			});
 		} else {
@@ -241,6 +264,7 @@ async function makeDirs() {
 }
 
 //Perform first time setup if haven't already
+//This function is a mess but at least it works I guess...
 async function firstSetup() {
 	return new Promise(function(resolve, reject) {
 		if (!fs.existsSync("./configs/account.json")) {
@@ -297,6 +321,8 @@ async function firstSetup() {
 				    						console.log("Created missing directory: ./configs")
 			    						}
 			    						rl.close();
+			    						//Group all the file creations into one neat little area so their
+			    						//Console gets spammed up hehehehe
 			    						fs.writeFile("./configs/account.json", logindetails, function(err) {
 			    							console.log("Created account.json containing login details");
 			    							console.log("Appended account.json with autohashtag config");
@@ -396,7 +422,7 @@ async function callEverything() {
 	//Post to instagram
 	async function postToInsta(filename, caption) {
 		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(async function(upload) {
-			let usercaption = await autoHashtag(caption, wordpos, accdetails["autohashtags"]);
+			let usercaption = await autoHashtag(caption.toLowerCase(), wordpos, accdetails["autohashtags"]);
 			let fakecaption = caption + usercaption;
 	    	Client.Media.configurePhoto(session, upload.params.uploadId, fakecaption).then(function(medium) {
 				console.log("Uploaded image: \"" + caption + "\" to instagram");
@@ -416,8 +442,6 @@ async function callEverything() {
 	};
 	//Start snooping
 	snoopReddit(options);
-
-	chooseInstaPhoto();
 }
 
 //Start the script
