@@ -52,6 +52,8 @@ Afterwards, run `beepboop.js` and the bot will create the rest of the needed dir
 
 #### Modification of files
 
+To add in your custom captions, open up `beepboop.js` and edit `var customcaption = "<caption>";`, replacing `<caption>` to anything of your liking.
+
 `account.json` and `subreddits.txt` is open for modification in case you entered any info wrongly.
 To fix either of the files, simply delete it and follow the steps [shown above here](#setup), for the file again.
 
