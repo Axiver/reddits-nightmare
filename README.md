@@ -1,8 +1,6 @@
 # reddits-nightmare
 
-This is a bot which may or may not contain spaghetti code which aims to repost the hot posts from any subreddit I want to an instagram account as a experiment.
-
-**This bot has the ability to repost hot posts from any subreddit you want, to any Instagram account you want. It will attempt to remove the fact that it's stealing from reddit, and while it is not perfect, it may come close to it in the near future with more development.**
+Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to instagram, causing massive havoc and ruins relationships once your close friends or families finds out.
 
 ## Getting started
 
@@ -22,7 +20,7 @@ After downloading Nodejs and npm, `cd` into the directory you installed the bot 
 #### Setup
 ##### Automated
 
-Run `node beepboop.js` and the bot will perform first time setup. When the bot asks you if you want to use automated setup, type 'y' or 'yes'.
+Run `node beepboop.js` and the bot will perform first time setup. When the bot asks you if you want to use automated setup, type `y` or `yes`.
 
 It will ask for Instagram account login details, and after it is given the info, it will store them locally at `./configs/account.json`
 
@@ -36,6 +34,8 @@ When prompted, type in the subreddits, without the `r/`, that you want the bot t
 
 Ensure that the subreddit you enter actually exists on Reddit, or you will be required to modify/delete `subreddits.txt` on your own to fix the bot.
 
+The bot will finally ask you if you want to enable `autohashtags`, a feature where the bot will generate hashtags based on the title of the posts it uploads. Answer `y` or `n` accordingly.
+
 ##### Manual
 
 Setting up manually is highly disencouraged as human error will likely occur.
@@ -43,7 +43,7 @@ Anyways, here are the instructions:
 
 Create the folder `/configs/` in the same directory as where `beepboop.js` is. In `/configs/`, create two files, naming them `account.json` and `subreddits.txt` respectively.
 
-In `account.json`, copy and paste this in: `{"insta_username": "username", "insta_password": "password"}`, replacing `username` and `password` with your own.
+In `account.json`, copy and paste this in: `{"insta_username": "username", "insta_password": "password", "autohashtags": "option"}`, replacing `username` and `password` with your own and `option` with either `yes` or `no`.
 
 In `subreddits.txt`, type in the subreddits you wish the bot to browse, without `r/` in front of it, seperating them with a comma.
 E.g. `subreddits.txt` would contain `dankmemes,memes,aww`
