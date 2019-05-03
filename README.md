@@ -1,6 +1,6 @@
 # reddits-nightmare
 
-Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to instagram, causing massive havoc and ruins relationships once your close friends or families finds out.
+Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to instagram, causing massive havoc and ruins relationships once your close friends or families find out.
 
 ## Getting started
 
