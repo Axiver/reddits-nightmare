@@ -30,6 +30,7 @@
     "aspect-ratio": "^2.0.3",
     "image-size": "^0.7.3",
     "instagram-private-api": "^0.10.1",
+    "lodash": "^4.17.15",
     "reddit-snooper": "^1.0.1",
     "wordpos": "^1.2.0"
   }
