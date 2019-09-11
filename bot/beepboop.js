@@ -118,9 +118,10 @@ async function download(url, postTitle, nsfw) {
 
 async function filterNouns(nouns) {
 	return new Promise(resolve => {
-		for (var i=0;i<nouns.length;i++) {
+		for (var i = 0; i < nouns.length; i++) {
 			if (nouns[i].length < 3) {
-				nouns.splice(nouns[i], 1);
+				nouns.splice(i, 1);
+				i--;
 			} else {
 		    	nouns[i]="#"+nouns[i];
 			}
@@ -131,13 +132,16 @@ async function filterNouns(nouns) {
 
 async function filterAdjectives(nouns, adjective) {
 	return new Promise(resolve => {
-		for (var i=0;i<adjective.length;i++) {
+		for (var i = 0; i < adjective.length; i++) {
 			if (adjective[i].length < 3) {
-				adjective.splice(adjective[i], 1);
+				adjective.splice(i, 1);
+				i--;
 			} else {
 		    	adjective[i]="#"+adjective[i];
-		    	if (nouns.includes(adjective[i]))
-		    		adjective.splice(adjective[i], 1);
+		    	if (nouns.includes(adjective[i])) {
+		    		adjective.splice(i, 1);
+		    		i--;
+		    	}
 			}
 		}
 		resolve(adjective);

@@ -32,6 +32,7 @@
     "instagram-private-api": "^0.10.1",
     "lodash": "^4.17.15",
     "reddit-snooper": "^1.0.1",
+    "tesseract.js": "^2.0.0-alpha.15",
     "wordpos": "^1.2.0"
   }
 }
