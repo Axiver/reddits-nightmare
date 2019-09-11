@@ -9,7 +9,6 @@ const { TesseractWorker } = tesseract;
 const worker = new TesseractWorker();
 
 //Variable declarations
-var customcaption = "<caption>";
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 25 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
@@ -33,6 +32,11 @@ var WordPOS = require('wordpos'),
 //Initialize instagram library
 var Client = require('instagram-private-api').V1;
 var session;
+
+//Create customcaption.txt
+if (!fs.existsSync("./configs/customcaption.txt")) {
+
+}
 
 //Functions
 
@@ -155,7 +159,8 @@ async function ocr(myImage, worker) {
 	return new Promise(resolve => {
 		//WHOA OCR WOWOWOWOWOWOWOWOOWOWOW
 		worker.recognize(myImage, 'eng').progress((p) => {
-			console.log('progress', p);
+			if (p["status"] == "recognizing text")
+				console.log("OCR:",p["progress"]*100 + "%");
 		}).then(({ text }) => {
 			resolve(text);
 			worker.terminate();
@@ -179,10 +184,13 @@ async function getNounsAdjectives(wordpos, caption) {
 //Takes nouns from the caption and makes them hashtags
 //Will optimize sometime later
 async function autoHashtag(caption, wordpos, config, myImage, worker) {
-	if (config != "yes")
+	if (config["autoHashtag"] != "yes")
 		return;
-	else if (config == "yes") {
-		let ocrtext = await ocr(myImage, worker);
+	else if (config["autoHashtag"] == "yes") {
+		if (config["ocr"] == "yes")
+			let ocrtext = await ocr(myImage, worker);
+		else
+			let ocrtext = "";
 		let customcaption = await getNounsAdjectives(wordpos, caption + " " + ocrtext);
 		return(customcaption);
 	} else {
@@ -288,6 +296,66 @@ async function makeDirs() {
 
 //Perform first time setup if haven't already
 //This function is a mess but at least it works I guess...
+
+async function subredditCreation(rl) {
+	return new Promise(function(resolve, reject) {
+		console.log("What subreddit(s) do you want to whitelist?");
+		console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
+		rl.resume();
+		rl.question('', function (answer) {
+			rl.pause();
+			if (answer.includes("r/")) {
+				console.log("Hey I said no 'r/'s >:(");
+				console.log("I'll fix that for you tho, no worries");
+				answer = answer.replace(/r\//g, '');
+			}
+			subreddits = answer.replace(/ /g, '');
+			resolve(subreddits);
+		});
+	});
+}
+
+async function instagramDetails(rl) {
+	let logindetails = {};
+	return new Promise(function(resolve, reject) {
+		console.log("What is your Instagram account username?");
+    	rl.resume();
+    	rl.question('', function (answer) {
+    		rl.pause();
+    		logindetails["insta_username"] = answer;
+    		console.log("What is the password associated with the Instagram account '" + logindetails["insta_username"] + "'?")
+    		rl.resume();
+    		rl.question('', function (answer) {
+    			rl.pause();
+    			logindetails["insta_password"] = answer;
+    			console.log("Would you like the bot to automatically generate hashtags for you? [y/cancel]");
+				rl.resume();
+				rl.question('', function (answer) {
+					rl.pause();
+					answer = answer.toLowerCase();
+					if (answer == "y" || answer == "yes") {
+						logindetails["autohashtags"] = "yes";
+					} else {
+						logindetails["autohashtags"] = "no";
+					}
+					console.log("Would you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel]");
+					rl.resume();
+					rl.question('', function (answer) {
+						rl.pause();
+						answer = answer.toLowerCase();
+						if (answer == "y" || answer == "yes") {
+							logindetails["ocr"] = "yes";
+						} else {
+							logindetails["ocr"] = "no";
+						}
+						resolve(JSON.stringify(logindetails));
+					});
+				});
+			});
+    	});
+	});
+}
+
 async function firstSetup() {
 	return new Promise(function(resolve, reject) {
 		if (!fs.existsSync("./configs/account.json")) {
@@ -302,71 +370,42 @@ async function firstSetup() {
 			});
 			//Function for asking the question
 			function recursiveAsyncReadLine() {
-			  	rl.question('', function (answer) {
+			  	rl.question('', async function (answer) {
 			  		rl.pause();
 			  	answer = answer.toLowerCase();
 			    if (answer == "y" || answer == "yes") {
-			    	console.log("What is your Instagram account username?");
-			    	rl.resume();
-			    	rl.question('', function (answer) {
-			    		rl.pause();
-			    		let acc_username = answer;
-			    		console.log("What is the password associated with the Instagram account '" + acc_username + "'?")
-			    		rl.resume();
-			    		rl.question('', function (answer) {
-			    			rl.pause();
-			    			let acc_password = answer;
-			    			let logindetails = '{"insta_username": "' + acc_username + '", "insta_password": "' + acc_password + '"';
-    						console.log("Would you like the bot to automatically generate hashtags for you? [y/cancel]");
-    						rl.resume();
-    						rl.question('', function (answer) {
-    							rl.pause();
-    							answer = answer.toLowerCase();
-    							if (answer == "y" || answer == "yes") {
-    								logindetails += ", \"autohashtags\": \"yes\"}";
-    							} else {
-    								logindetails += ", \"autohashtags\": \"no\"}";
-    							}
-    							if (!fs.existsSync("./configs/subreddits.txt")) {
-	    							console.log("What subreddit(s) do you want to whitelist?");
-			    					console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
-			    					rl.resume();
-			    					rl.question('', function (answer) {
-			    						rl.pause();
-			    						if (answer.includes("r/")) {
-			    							console.log("Hey I said no 'r/'s >:(");
-			    							console.log("I'll fix that for you tho, no worries");
-			    							answer = answer.replace(/r\//g, '');
-			    						}
-			    						subreddits = answer.replace(/ /g, '');
-			    						if (!fs.existsSync("./configs")) {
-				    						fs.mkdirSync("./configs");
-				    						console.log("Created missing directory: ./configs")
-			    						}
-			    						rl.close();
-			    						//Group all the file creations into one neat little area so their
-			    						//Console gets spammed up hehehehe
-			    						fs.writeFile("./configs/account.json", logindetails, function(err) {
-			    							console.log("Created account.json containing login details");
-			    							console.log("Appended account.json with autohashtag config");
-				    						fs.writeFile("./configs/subreddits.txt", subreddits, function(err) {
-				    							console.log("Created subreddits.txt containing a list of subreddits to read from.");
-												console.log("First time setup complete");
-				    							resolve();
-											});
-				    					});
-			    					});
-			    				} else {
-			    					fs.writeFile("./configs/account.json", logindetails, function(err) {
-			    						console.log("Created account.json containing login details");
-			    						console.log("First time setup complete");
-			    						rl.close();
-			    						resolve();
-			    					});
-			    				}
-	    					});
-			    		});
-			    	});
+			    	let logindetails = await instagramDetails(rl);
+					if (!fs.existsSync("./configs/subreddits.txt")) {
+						let subreddits = await subredditCreation(rl);
+						if (!fs.existsSync("./configs")) {
+							fs.mkdirSync("./configs");
+							console.log("Created missing directory: ./configs")
+						}
+						if (!fs.existsSync("./configs/customcaption.txt")) {
+							fs.writeFile("./configs/customcaption.txt", "", function(err) {
+								console.log("Created missing file: ./configs/customcaption.txt");
+							});
+						}
+						rl.close();
+						//Group all the file creations into one neat little area so their
+						//Console gets spammed up hehehehe
+						fs.writeFile("./configs/account.json", logindetails, function(err) {
+							console.log("Created account.json containing login details");
+							console.log("Appended account.json with autohashtag config");
+    						fs.writeFile("./configs/subreddits.txt", subreddits, function(err) {
+    							console.log("Created subreddits.txt containing a list of subreddits to read from.");
+								console.log("First time setup complete");
+    							resolve();
+							});
+    					});
+    				} else {
+    					fs.writeFile("./configs/account.json", logindetails, function(err) {
+    						console.log("Created account.json containing login details");
+    						console.log("First time setup complete");
+    						rl.close();
+    						resolve();
+    					});
+    				}
 			    } else if (answer == "n" || answer == "no") {
 			    	console.log("Alright, but you need to create account.json yourself or the bot will refuse to start.");
 			    	console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare for more information.");
@@ -410,6 +449,7 @@ async function callEverything() {
 		setInterval(chooseInstaPhoto, 300000);
 	});
 
+	var customcaption = require("./configs/customcaption.txt");
 	//Chooses a photo randomly from /images/approved and posts it to ig
 	function chooseInstaPhoto() {
 		//Choose random image
@@ -445,7 +485,7 @@ async function callEverything() {
 	//Post to instagram
 	async function postToInsta(filename, caption) {
 		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(async function(upload) {
-			let usercaption = await autoHashtag(caption.toLowerCase(), wordpos, accdetails["autohashtags"], "./assets/images/approved/" + filename, worker);
+			let usercaption = await autoHashtag(caption.toLowerCase(), wordpos, accdetails, "./assets/images/approved/" + filename, worker);
 			let fakecaption = caption + usercaption;
 	    	Client.Media.configurePhoto(session, upload.params.uploadId, fakecaption).then(function(medium) {
 				console.log("Uploaded image: \"" + caption + "\" to instagram");
