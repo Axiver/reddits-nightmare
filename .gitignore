@@ -4,3 +4,5 @@
 /bot/configs/account.json
 /bot/cookies/g.json
 /bot/configs/
+/bot/eng.traineddata
+/bot/test.js
