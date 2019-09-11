@@ -4,6 +4,9 @@ const fs = require('fs');
 var path = require('path');
 var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
+var tesseract = require('tesseract.js');
+const { TesseractWorker } = tesseract;
+const worker = new TesseractWorker();
 
 //Variable declarations
 var customcaption = "<caption>";
@@ -148,28 +151,44 @@ async function filterAdjectives(nouns, adjective) {
 	});
 }
 
+async function ocr(myImage, worker) {
+	return new Promise(resolve => {
+		//WHOA OCR WOWOWOWOWOWOWOWOOWOWOW
+		worker.recognize(myImage, 'eng').progress((p) => {
+			console.log('progress', p);
+		}).then(({ text }) => {
+			resolve(text);
+			worker.terminate();
+		});
+	});
+}
+
+async function getNounsAdjectives(wordpos, caption) {
+	return new Promise(resolve => {
+		wordpos.getNouns(caption, async function(result) {
+			let nouns = await filterNouns(result);
+			wordpos.getAdjectives(caption, async function(result) {
+				let adjective = await filterAdjectives(nouns, result);
+				let editedcaption = nouns.join(" ") + " " + adjective.join(" ");
+				resolve(customcaption + editedcaption);
+			});
+		});
+	});
+}
+
 //Takes nouns from the caption and makes them hashtags
 //Will optimize sometime later
-async function autoHashtag(caption, wordpos, config) {
-	return new Promise(resolve => {
-		if (config != "yes")
-			resolve();
-		else if (config == "yes") {
-			wordpos.getNouns(caption, async function(result) {
-				let nouns = await filterNouns(result);
-				wordpos.getAdjectives(caption, async function(result) {
-					let adjective = await filterAdjectives(nouns, result);
-					let editedcaption = nouns.join(" ");
-					editedcaption += " ";
-					editedcaption += adjective.join(" ");
-					resolve(customcaption + editedcaption);
-				});
-			});
-		} else {
-			console.log("Your account.json file is broken. Please delete it and rerun the bot.");
-			resolve(customcaption);
-		}
-	});
+async function autoHashtag(caption, wordpos, config, myImage, worker) {
+	if (config != "yes")
+		return;
+	else if (config == "yes") {
+		let ocrtext = await ocr(myImage, worker);
+		let customcaption = await getNounsAdjectives(wordpos, caption + " " + ocrtext);
+		return(customcaption);
+	} else {
+		console.log("Your account.json file is broken. Please delete it and rerun the bot.");
+		return(customcaption);
+	}
 }
 
 //Checks image url for file format
@@ -426,7 +445,7 @@ async function callEverything() {
 	//Post to instagram
 	async function postToInsta(filename, caption) {
 		Client.Upload.photo(session, "./assets/images/approved/" + filename).then(async function(upload) {
-			let usercaption = await autoHashtag(caption.toLowerCase(), wordpos, accdetails["autohashtags"]);
+			let usercaption = await autoHashtag(caption.toLowerCase(), wordpos, accdetails["autohashtags"], "./assets/images/approved/" + filename, worker);
 			let fakecaption = caption + usercaption;
 	    	Client.Media.configurePhoto(session, upload.params.uploadId, fakecaption).then(function(medium) {
 				console.log("Uploaded image: \"" + caption + "\" to instagram");
