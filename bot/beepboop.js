@@ -187,10 +187,11 @@ async function autoHashtag(caption, wordpos, config, myImage, worker) {
 	if (config["autoHashtag"] != "yes")
 		return;
 	else if (config["autoHashtag"] == "yes") {
-		if (config["ocr"] == "yes")
+		if (config["ocr"] == "yes") {
 			let ocrtext = await ocr(myImage, worker);
-		else
+		} else {
 			let ocrtext = "";
+		}
 		let customcaption = await getNounsAdjectives(wordpos, caption + " " + ocrtext);
 		return(customcaption);
 	} else {
