@@ -1,6 +1,6 @@
 # reddits-nightmare
 
-Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to instagram, causing massive havoc and ruins relationships once your close friends or families find out.
+Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to Instagram, causing massive havoc and ruins relationships once your close friends or families find out.
 
 ## Getting started
 
@@ -8,14 +8,14 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You need Nodejs and npm (which comes with nodejs) to use this bot.
+You need Node.js and npm (which comes with Node.js) to use this bot.
 
-[Download Nodejs and npm](https://nodejs.org/en/)
+[Download Node.js and npm](https://nodejs.org/en/)
 
 ### Installing
 #### Node packages
 
-After downloading Nodejs and npm, `cd` into the directory you installed the bot to and run `npm i`. It should automatically install all the needed modules for this bot to work.
+After downloading Node.js and npm, `cd` into the directory you installed the bot to and run `npm i`. It should automatically install all the needed modules for this bot to work.
 
 #### Setup
 ##### Automated
@@ -59,12 +59,12 @@ To fix either of the files, simply delete it and follow the steps [shown above h
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](Contributing.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## Authors
 
 * **Garlicvideos** - [Garlicvideos](https://github.com/Garlicvideos)
-* **KorkyMonster** - [KorkyMonster](https://github.com/KorkyMonster)
+* **KorkyMonster** - [KorkyMonster](https://github.com/AnanthVivekanand)
 
 See also the list of [contributors](https://github.com/Garlicvideos/reddits-nightmare/contributors) who participated in this project.
 
