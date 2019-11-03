@@ -71,3 +71,7 @@ See also the list of [contributors](https://github.com/Garlicvideos/reddits-nigh
 ## License
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details
+
+## If you like what I do, please consider keeping me alive
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](http://paypal.me/Garlicvideos)
