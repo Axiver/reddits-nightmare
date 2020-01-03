@@ -442,26 +442,27 @@ function contains(target, pattern){
     return (value === 1);
 }
 
-//Formats file name to save to Filesystem
-function formatFileName(postTitle, postUrl, nsfw) {
-	return new Promise(resolve => {
-		let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i "];
-		//This does not work for some reason, I'll try to get it working the next version.
-		/*let specialCharacters = ["?", "/", "<", ">", "\"", "*", "\\"];
+//Replaces special characters in the filename of files
+async function replaceSpecialChars(postTitle) {
+	return new Promise(function(resolve, reject) {
+		let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g];
 		let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]"];
 
 		//Replace special characters into filesystem-compatible ones
 		for (var i = 0; i < specialCharacters.length; i++) {
-			postTitle.replace(specialCharacters[i], replacement[i]);
-		}*/
+			postTitle = postTitle.replace(specialCharacters[i], replacement[i]);
+		}
+		console.log(postTitle);
+		resolve(postTitle);
+	});
+}
 
-		//Filter out bad characters
-		postTitle = postTitle.replace(/\?/g, "[q]");
-		postTitle = postTitle.replace(/\//g, "[s]");
-		postTitle = postTitle.replace(/\</g, "[l]");
-		postTitle = postTitle.replace(/\>/g, "[m]");
-		postTitle = postTitle.replace(/\"/g, "[quo]");
-		postTitle = postTitle.replace(/\*/g, "[st]");
+//Formats file name to save to Filesystem
+function formatFileName(postTitle, postUrl, nsfw) {
+	return new Promise(async function(resolve, reject) {
+		let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i "];
+		//Reformats the filename so that it complies with window's strict filesystem rules
+		postTitle = await replaceSpecialChars(postTitle);
 
 		let filename;
 		//Check if post is NSFW
