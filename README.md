@@ -13,9 +13,12 @@ You need Node.js and npm (which comes with Node.js) to use this bot.
 [Download Node.js and npm](https://nodejs.org/en/)
 
 ### Installing
+#### The bot
+Download the bot by going to [the releases page](https://github.com/Garlicvideos/reddits-nightmare/releases) and download the zip of the latest release.
+
 #### Node packages
 
-After downloading Node.js and npm, `cd` into the directory you installed the bot to and run `npm i`. It should automatically install all the needed modules for this bot to work.
+After downloading Nodejs, npm and the bot, `cd` into the directory you installed the bot to and run `npm i`. It should automatically install all the needed modules for this bot to work.
 
 #### Setup
 ##### Automated
