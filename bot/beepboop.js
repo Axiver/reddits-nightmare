@@ -55,7 +55,6 @@ async function setup() {
 			  	output: process.stdout
 			});
 			//Ask a question
-			//console.log("Would you like to automatically configure the config file? (You will have to do this manually if you answer no) [y/n]");
 			rl.question('Would you like to automatically configure the config file? (You will have to do this manually if you answer no) [y/n] \n', async function (answer) {
 			  	rl.pause();
 			  	answer = answer.toLowerCase();
@@ -70,7 +69,7 @@ async function setup() {
   					}
 			  	} else {
 			    	console.log("Okay, but you need to perform manual setup or the bot will refuse to start.");
-			    	console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare for more information.");
+			    	console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare/wiki for more information.");
 			    	//End readline and exit nodejs
 			    	rl.close();
 			    	process.exit(0);
@@ -135,7 +134,7 @@ async function setupInstagram(rl) {
 								console.log("Invalid response received, defaulting to 15.");
 								settings["top"] = 15;
 							}
-							rl.question('\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. However, you will not be required to enter your password everytime the bot reboots if this is enabled.) [y/cancel]\n', async function(answer) {
+							rl.question('\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. (It is not recommended to enable this as you only need to type in your password once every now and then anyways, due to the usage of sessions)\n', async function(answer) {
 								answer = answer.toLowerCase();
 								if (answer == "y" || answer == "yes") {
 										rl.question('\nWhat is the password associated with Instagram account "' + settings["insta_username"] + '"?\n', async function(answer) {
@@ -401,7 +400,6 @@ async function getNounsAdjectives(wordpos, caption) {
 			wordpos.getAdjectives(caption, async function(result) {
 				let adjective = await filterAdjectives(nouns, result);
 				let hashtags = nouns.join(" ") + " " + adjective.join(" ");
-				console.log("Autohashtag done. This is to be passed through the function: " + hashtags);
 				resolve(hashtags);
 			});
 		});
@@ -416,12 +414,10 @@ async function autoHashtag(caption, config, myImage) {
 		else if (config["autohashtags"] == "yes") {
 			if (config["ocr"] == "yes") {
 				var ocrtext = await ocr(myImage);
-				console.log("OCR Result:" + ocrtext);
 			} else {
 				var ocrtext = "";
 			}
 			let hashtags = await getNounsAdjectives(wordpos, caption + " " + ocrtext.toLowerCase());
-			console.log("The final result of autoHashtag is: " + hashtags);
 			resolve(hashtags);
 		} else {
 			console.log("Your account.json file is broken. Please delete it and rerun the bot.");
@@ -436,7 +432,6 @@ async function postToInsta(filename, caption) {
 	var configs = require('./configs/account.json');
 	let path = "./assets/images/approved/" + filename;
 	let hashtags = await autoHashtag(caption.toLowerCase(), configs, "./assets/images/approved/" + filename);
-	console.log("The gathered hashtags are: " + hashtags);
 	let finalCaption = caption + "\n\n\n" + hashtags;
 	//Uploads the image to Instagram
 	var upload = await ig.publish.photo({
