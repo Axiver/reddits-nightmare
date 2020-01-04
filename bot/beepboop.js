@@ -629,7 +629,7 @@ async function instagram() {
 	}
 
 	//Activates reddit crawler
-	//snoopReddit();
+	snoopReddit();
 
 	//Create a new Instagram session
 	await login(configs["insta_username"], insta_password);
