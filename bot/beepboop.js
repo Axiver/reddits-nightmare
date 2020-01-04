@@ -1,5 +1,5 @@
 //Initialise required libraries
-const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError } = require("instagram-private-api");
+const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
 const ig = new IgApiClient();
 const Bluebird = require("Bluebird");
 const fs = require("fs");
@@ -8,9 +8,6 @@ var path = require('path');
 var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
 const { createWorker } = require('tesseract.js');
-const worker = createWorker({
-	logger: m => console.log("OCR:",m["progress"]*100 + "%")
-});
 var customcaption = ""; //Temporary global variable. To be implemented as a feature.
 
 //Initialize WordPOS library (Finds adjectives and verbs and nouns, that cool stuff)
@@ -260,73 +257,109 @@ function loadSession() {
 	return session;
 }
 
+//Sends the challenge code to Instagram
+async function solveChallenge() {
+	return new Promise(async function(resolve, reject) {
+		//Asks the user for the code
+		let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)\n";
+		let code = await askQuestion(question);
+		//Sends the code to Instagram
+  		await Bluebird.try(async() => {
+	  		console.log(await ig.challenge.sendSecurityCode(code));
+	  		if (ig.account) {
+	  			//Serialize session cookie (This gets invoked after every call to Instagram)
+				ig.request.end$.subscribe(async () => {
+					const serialized = await ig.state.serialize();
+					delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
+					saveSession(serialized);
+				});
+	  			console.log("Successfully logged in to Instagram!");
+	  			resolve();
+	  		}
+	  	}).catch(IgChallengeWrongCodeError, async() => {
+	  		//The code entered was wrong, so we call this function again
+	  		console.log("The code given was incorrect! Please type it in again.");
+	  		solveChallenge();
+	  	});
+	});
+}
+
 //Login to Instagram
 async function login(username, password) {
-	//Generates a ID for Instagram
-  	ig.state.generateDevice(username);
-  	//Serialize session cookie (This gets invoked after every call to Instagram)
-	ig.request.end$.subscribe(async () => {
-		const serialized = await ig.state.serialize();
-		delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
-		saveSession(serialized);
+	return new Promise(async function(resolve, reject) {
+		//Generates a ID for Instagram
+	  	ig.state.generateDevice(username);
+		//Check if the cookie exists
+		if (findSession()) {
+			//Imports the saved cookie
+		    await ig.state.deserialize(loadSession());
+		    if (ig.account) {
+		    	//Serialize session cookie (This gets invoked after every call to Instagram)
+				ig.request.end$.subscribe(async () => {
+					const serialized = await ig.state.serialize();
+					delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
+					saveSession(serialized);
+				});
+		    	console.log("Successfully logged in to Instagram!");
+		    	resolve();
+		    } else {
+		    	//Attempt to relogin
+		    	login(username, password);
+		    }
+		} else {
+		  	//Login procedure
+		  	await Bluebird.try(async() => {
+		  		//Execute usual requests in the android app, not required but reduces suspicion from Instagram
+				await ig.simulate.preLoginFlow();
+				//Login
+				if (await ig.account.login(username, password)) {
+					//Serialize session cookie (This gets invoked after every call to Instagram)
+					ig.request.end$.subscribe(async () => {
+						const serialized = await ig.state.serialize();
+						delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
+						saveSession(serialized);
+					});
+					console.log("Successfully logged in to Instagram!");
+					resolve();
+				}
+				//Execute requests normally done post-login, reduces suspicion
+				process.nextTick(async() => await ig.simulate.postLoginFlow());
+		  	}).catch(IgLoginBadPasswordError, async() => {
+		  		//The password entered is wrong, so we ask the user for the correct one
+		  		let correctPassword = await askQuestion("\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n");
+		  		//Save the correct one to account.json if "Remember me" is enabled
+		  		let configs = require("./configs/account.json");
+		  		if (configs["insta_password"]) {
+		  			configs["insta_password"] = correctPassword;
+		  			fs.writeFile("./configs/account.json", JSON.stringify(configs), function(err) {
+		  				if (err)
+		  					console.log("There was an error while trying to update account.json with the new password: " + err);
+		  			});
+		  		}
+		  		//Attempt to relogin
+		  		login(username, correctPassword);
+		  	}).catch(IgCheckpointError, async() => {
+		  		//-- This portion should THEORETICALLY work. I've never had my account get challenged before, so I have nothing to test it on.
+		  		//-- In the event that this does not work, please open a new issue at https://github.com/Garlicvideos/reddits-nightmare/issues/new
+		  		//Instagram wants us to prove that we are human
+		  		console.log("Human verification received from Instagram! Solving challenge...");
+				//Initiates the challenge
+				await Bluebird.try(async() => {
+			  		await ig.challenge.auto(true);
+			  		console.log(ig.state.challenge);
+			  	}).catch(IgCheckpointError, async() => {
+			  		//Call the checkpoint solving team
+			  		await solveChallenge();
+			  		/*
+			  		//Temporary workaround
+			  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
+			  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
+			  		process.exit(0);
+			  		*/
+			  	});
+		  	});
+	  	}
 	});
-	//Check if the cookie exists
-	if (findSession()) {
-		//Imports the saved cookie
-	    await ig.state.deserialize(loadSession());
-	    if (ig.account) {
-	    	console.log("Successfully logged in to Instagram!");
-	    } else {
-	    	//Attempt to relogin
-	    	login(username, password);
-	    }
-	} else {
-	  	//Login procedure
-	  	await Bluebird.try(async() => {
-	  		//Execute usual requests in the android app, not required but reduces suspicion from Instagram
-			await ig.simulate.preLoginFlow();
-			//Login
-			if (await ig.account.login(username, password)) {
-				console.log("Successfully logged in to Instagram!");
-			}
-			//Execute requests normally done post-login, reduces suspicion
-			process.nextTick(async() => await ig.simulate.postLoginFlow());
-	  	}).catch(IgLoginBadPasswordError, async() => {
-	  		//The password entered is wrong, so we ask the user for the correct one
-	  		let correctPassword = await askQuestion("\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n");
-	  		//Save the correct one to account.json if "Remember me" is enabled
-	  		let configs = require("./configs/account.json");
-	  		if (configs["insta_password"]) {
-	  			configs["insta_password"] = correctPassword;
-	  			fs.writeFile("./configs/account.json", JSON.stringify(configs), function(err) {
-	  				if (err)
-	  					console.log("There was an error while trying to update account.json with the new password: " + err);
-	  			});
-	  		}
-	  		//Attempt to relogin
-	  		login(username, correctPassword);
-	  	}).catch(IgCheckpointError, async() => {
-	  		//-- The library has a bug with the auto challenge solving module. The code below should be working, so I'll just comment it out for now in case the maintainer fixes it in a future update.
-	  		/*
-	  		//Instagram wants us to prove that we are human
-	  		console.log("Human verification received from Instagram! Solving challenge...");
-			//Initiates the challenge
-	  		await ig.challenge.auto(true);
-	  		let challenge = ig.state.challenge;
-	  		console.log(challenge);
-	  		//Asks the user for the code
-	  		let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)";
-	  		let code = await askQuestion(question);
-	  		console.log("hold on");
-	  		console.log(await ig.challenge.sendSecurityCode(code));
-	  		*/
-
-	  		//Temporary workaround
-	  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
-	  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
-	  		process.exit(0);
-	  	});
-  	}
 }
 
 //Makes sure aspect ratio of image can be uploaded to instagram
@@ -337,16 +370,15 @@ function checkRatio(aspectRatio) {
 	let allowedHeight = [2048, 566, 400];
 	//Loops through to check
 	for (var i = 0; i < allowedWidth.length; i++) {
-		if (!aspectRatio[0] <= allowedWidth[i] && !aspectRatio[1] <= allowedHeight[i]) {
-			return false;
+		if (aspectRatio[0] <= allowedWidth[i] && aspectRatio[1] <= allowedHeight[i]) {
+			if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
+				return true;
+			} else {
+				return false;
+			}
 		}
 	}
-
-	if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
-		return true;
-	} else {
-		return false;
-	}
+	return false;
 }
 
 async function filterNouns(nouns) {
@@ -384,6 +416,9 @@ async function filterAdjectives(nouns, adjective) {
 //Works black magic on the image being uploaded
 async function ocr(myImage) {
 	return new Promise(async function(resolve, reject) {
+		const worker = createWorker({
+			logger: m => console.log("[OCR] '" + myImage + "' : ",m["progress"]*100 + "%")
+		});
 		await worker.load();
 	  	await worker.loadLanguage('eng');
 	  	await worker.initialize('eng');
@@ -549,8 +584,8 @@ function formatForInsta(dir) {
 	//Remove file extensions from caption and add back special characters
 	let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, "", "", ""];
 	let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", ".jpg", ".jpeg", ".png"];
-	for (var i = 0; i < extensions.length; i++) {
-		dir = dir.replace(replacement[i], replacement[i]);
+	for (var i = 0; i < specialCharacters.length; i++) {
+		dir = dir.replace(replacement[i], specialCharacters[i]);
 	}
 
 	return dir;
