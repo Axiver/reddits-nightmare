@@ -1,5 +1,5 @@
 //Initialise required libraries
-const { IgApiClient, IgCheckpointError } = require("instagram-private-api");
+const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError } = require("instagram-private-api");
 const ig = new IgApiClient();
 const Bluebird = require("Bluebird");
 const fs = require("fs");
@@ -29,7 +29,7 @@ snooper = new Snooper({
 async function makeDirs() {
 	return new Promise(function(resolve, reject) {
 		//List of needed directories
-		let directories = ["./configs", "./assets", "./assets/images", "./assets/images/approved", "./assets/images/nsfw", "./assets/images/rejected", "./assets/images/uploaded", "./assets/images/error"];
+		let directories = ["./configs", "./cookies", "./assets", "./assets/images", "./assets/images/approved", "./assets/images/nsfw", "./assets/images/rejected", "./assets/images/uploaded", "./assets/images/error"];
 		//Create every directory in the array
 		directories.forEach(function(dir) {
 			if (!fs.existsSync(dir)) {
@@ -240,39 +240,94 @@ async function askQuestion(question) {
 	});
 }
 
+//Save session cookie
+function saveSession(cookie) {
+	fs.writeFile("./cookies/session.json", JSON.stringify(cookie), function(err, result) {
+		if (err)
+			console.log("There was an error while saving session data: " + err);
+	});
+	return cookie;
+}
+
+//Check if a session exists
+function findSession() {
+	//Checks if the file exists
+	return fs.existsSync("./cookies/session.json");
+}
+
+//Load the session
+function loadSession() {
+	let session = require("./cookies/session.json");
+	return session;
+}
+
 //Login to Instagram
 async function login(username, password) {
 	//Generates a ID for Instagram
   	ig.state.generateDevice(username);
-  	//Login procedure
-  	await Bluebird.try(async() => {
-  		//Execute usual requests in the android app, not required but reduces suspicion from Instagram
-		await ig.simulate.preLoginFlow();
-		//Login
-		await ig.account.login(username, password);
-		//Execute requests normally done post-login, reduces suspicion
-		process.nextTick(async() => await ig.simulate.postLoginFlow());
-  	}).catch(IgCheckpointError, async() => {
-  		//-- The library has a bug with the auto challenge solving module. The code below should be working, so I'll just comment it out for now in case the maintainer fixes it in a future update.
-  		/*
-  		//Instagram wants us to prove that we are human
-  		console.log("Human verification received from Instagram! Solving challenge...");
-		//Initiates the challenge
-  		await ig.challenge.auto(true);
-  		let challenge = ig.state.challenge;
-  		console.log(challenge);
-  		//Asks the user for the code
-  		let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)";
-  		let code = await askQuestion(question);
-  		console.log("hold on");
-  		console.log(await ig.challenge.sendSecurityCode(code));
-  		*/
+  	//Serialize session cookie (This gets invoked after every call to Instagram)
+	ig.request.end$.subscribe(async () => {
+		const serialized = await ig.state.serialize();
+		delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
+		saveSession(serialized);
+	});
+	//Check if the cookie exists
+	if (findSession()) {
+		//Imports the saved cookie
+	    await ig.state.deserialize(loadSession());
+	    if (ig.account) {
+	    	console.log("Successfully logged in to Instagram!");
+	    } else {
+	    	//Attempt to relogin
+	    	login(username, password);
+	    }
+	} else {
+	  	//Login procedure
+	  	await Bluebird.try(async() => {
+	  		//Execute usual requests in the android app, not required but reduces suspicion from Instagram
+			await ig.simulate.preLoginFlow();
+			//Login
+			if (await ig.account.login(username, password)) {
+				console.log("Successfully logged in to Instagram!");
+			}
+			//Execute requests normally done post-login, reduces suspicion
+			process.nextTick(async() => await ig.simulate.postLoginFlow());
+	  	}).catch(IgLoginBadPasswordError, async() => {
+	  		//The password entered is wrong, so we ask the user for the correct one
+	  		let correctPassword = await askQuestion("\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n");
+	  		//Save the correct one to account.json if "Remember me" is enabled
+	  		let configs = require("./configs/account.json");
+	  		if (configs["insta_password"]) {
+	  			configs["insta_password"] = correctPassword;
+	  			fs.writeFile("./configs/account.json", JSON.stringify(configs), function(err) {
+	  				if (err)
+	  					console.log("There was an error while trying to update account.json with the new password: " + err);
+	  			});
+	  		}
+	  		//Attempt to relogin
+	  		login(username, correctPassword);
+	  	}).catch(IgCheckpointError, async() => {
+	  		//-- The library has a bug with the auto challenge solving module. The code below should be working, so I'll just comment it out for now in case the maintainer fixes it in a future update.
+	  		/*
+	  		//Instagram wants us to prove that we are human
+	  		console.log("Human verification received from Instagram! Solving challenge...");
+			//Initiates the challenge
+	  		await ig.challenge.auto(true);
+	  		let challenge = ig.state.challenge;
+	  		console.log(challenge);
+	  		//Asks the user for the code
+	  		let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)";
+	  		let code = await askQuestion(question);
+	  		console.log("hold on");
+	  		console.log(await ig.challenge.sendSecurityCode(code));
+	  		*/
 
-  		//Temporary workaround
-  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
-  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
-  		process.exit(0);
-  	});
+	  		//Temporary workaround
+	  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
+	  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
+	  		process.exit(0);
+	  	});
+  	}
 }
 
 //Makes sure aspect ratio of image can be uploaded to instagram
@@ -526,7 +581,6 @@ async function replaceSpecialChars(postTitle) {
 		for (var i = 0; i < specialCharacters.length; i++) {
 			postTitle = postTitle.replace(specialCharacters[i], replacement[i]);
 		}
-		console.log(postTitle);
 		resolve(postTitle);
 	});
 }
@@ -628,13 +682,11 @@ async function instagram() {
 		var insta_password = configs["insta_password"];
 	}
 
-	//Activates reddit crawler
-	snoopReddit();
-
 	//Create a new Instagram session
 	await login(configs["insta_username"], insta_password);
 
-	console.log("Successfully logged in to Instagram!");
+	//Activates reddit crawler
+	snoopReddit();
 
 	//-- Upload every (25) minutes --//
 	//You may change the upload frequency if you wish. (The number below is in milliseconds)
