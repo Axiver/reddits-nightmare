@@ -253,6 +253,8 @@ async function login(username, password) {
 		//Execute requests normally done post-login, reduces suspicion
 		process.nextTick(async() => await ig.simulate.postLoginFlow());
   	}).catch(IgCheckpointError, async() => {
+  		//-- The library has a bug with the auto challenge solving module. The code below should be working, so I'll just comment it out for now in case the maintainer fixes it in a future update.
+  		/*
   		//Instagram wants us to prove that we are human
   		console.log("Human verification received from Instagram! Solving challenge...");
 		//Initiates the challenge
@@ -264,6 +266,12 @@ async function login(username, password) {
   		let code = await askQuestion(question);
   		console.log("hold on");
   		console.log(await ig.challenge.sendSecurityCode(code));
+  		*/
+
+  		//Temporary workaround
+  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
+  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
+  		process.exit(0);
   	});
 }
 
