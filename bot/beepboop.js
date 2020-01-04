@@ -1,6 +1,6 @@
 //Initialise required libraries
-const instagram_api = require("instagram-private-api");
-const ig = new instagram_api.IgApiClient();
+const { IgApiClient, IgCheckpointError } = require("instagram-private-api");
+const ig = new IgApiClient();
 const Bluebird = require("Bluebird");
 const fs = require("fs");
 const request = require('request');
@@ -47,7 +47,7 @@ async function setup() {
 		//Check if account credential file exists
 		if (!fs.existsSync("./configs/account.json")) {
 			//If no, perform first time setup
-			console.log("Performing first time setup. Login details are required.");
+			console.log("Performing first time setup");
 			//Hook to console
 			var readline = require('readline');
 			var rl = readline.createInterface({
@@ -87,23 +87,67 @@ async function setupInstagram(rl) {
 	return new Promise(function(resolve, reject) {
 		let settings = {};
 		rl.resume();
-		rl.question('What is your Instagram account username? \n', async function (answer) {
+		rl.question('\nWhat is your Instagram account username? \n', async function (answer) {
 			settings["insta_username"] = answer;
-			rl.question('Would you like the bot to automatically generate hashtags for you? [y/cancel] \n', async function(answer) {
+			rl.question('\nWould you like the bot to automatically generate hashtags for you? [y/cancel] \n', async function(answer) {
 				answer = answer.toLowerCase();
 				if (answer == "y" || answer == "yes") {
 					settings["autohashtags"] = "yes";
 				} else {
 					settings["autohashtags"] = "no";
 				}
-				rl.question('Would you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n', async function(answer) {
+				rl.question('\nWould you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n', async function(answer) {
 					answer = answer.toLowerCase();
 					if (answer == "y" || answer == "yes") {
 						settings["ocr"] = "yes";
 					} else {
 						settings["ocr"] = "no";
 					}
-					resolve(JSON.stringify(settings));
+					rl.question('\nHow would you like the bot to sort? (Defaults to hot) [hot/top_24/top_day/controversial/rising] \n', async function(answer) {
+						//Pause it for the time being, in case the user spams inputs
+						rl.pause();
+						answer = answer.toLowerCase();
+						switch (answer) {
+							case "hot":
+								settings["sort"] = "hot";
+								break;
+							case "top_24":
+								settings["sort"] = "top_24";
+								break;
+							case "top_day":
+								settings["sort"] = "top_day";
+								break;
+							case "controversial":
+								settings["sort"] = "controversial";
+								break;
+							case "rising":
+								settings["sort"] = "rising";
+								break;
+							default:
+								settings["sort"] = "hot";
+								console.log("Invalid response received, defaulting to 'hot'");
+						}
+						rl.resume();
+						rl.question('\nHow many posts would you like to monitor? (E.g. Top 10 posts of hot | Defaults to 15) [1-100]\n', async function(answer) {
+							if (!isNaN(answer) && answer > 0) {
+								settings["top"] = answer;
+							} else {
+								console.log("Invalid response received, defaulting to 15.");
+								settings["top"] = 15;
+							}
+							rl.question('\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. However, you will not be required to enter your password everytime the bot reboots if this is enabled.) [y/cancel]\n', async function(answer) {
+								answer = answer.toLowerCase();
+								if (answer == "y" || answer == "yes") {
+										rl.question('\nWhat is the password associated with Instagram account "' + settings["insta_username"] + '"?\n', async function(answer) {
+											settings["insta_password"] = answer;
+											resolve(JSON.stringify(settings));
+										});
+								} else {
+									resolve(JSON.stringify(settings));
+								}
+							});
+						});
+					});
 				});
 			});
 		});
@@ -113,7 +157,7 @@ async function setupInstagram(rl) {
 //Asks the user for subreddit configuration
 async function setupSubreddits(rl) {
 	return new Promise(function(resolve, reject) {
-		console.log("What subreddit(s) do you want to whitelist?");
+		console.log("\nWhat subreddit(s) do you want to whitelist?");
 		console.log("(r/all works too. Do NOT include 'r/'. Seperate using commas. Make sure the subreddit exists, or the bot will spit out errors/crash later on.)")
 		rl.resume();
 		rl.question('', function (answer) {
@@ -121,7 +165,7 @@ async function setupSubreddits(rl) {
 			if (answer.includes("r/")) {
 				//Removes "r/"s from user's input
 				answer = answer.replace(/r\//g, '');
-				console.log("\"r/\"s aren't required. Your input has been rectified");
+				console.log("\n\"r/\"s aren't required. Your input has been fixed");
 			}
 			//Removes spaces in user's input
 			subreddits = answer.replace(/ /g, '');
@@ -142,32 +186,36 @@ async function createConfigs(subreddits, logindetails) {
 				//Create subreddit config file
 				if (!fs.existsSync("./configs/subreddits.txt")) {
 					fs.writeFile("./configs/subreddits.txt", subreddits, function(err) {
-						if (!err) {
-							console.log("Created subreddits.txt containing a list of subreddits to read from.");
-							//Create file to store user's custom caption
-					  		if (!fs.existsSync("./configs/customcaption.txt")) {
-								fs.writeFile("./configs/customcaption.txt", "", function(err) {
-									if (!err) {
-										console.log("Created missing file: ./configs/customcaption.txt");
-										//Check if all the config files are present. If so, return true.
-										if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/account.json") && fs.existsSync("./configs/subreddits.txt")) {
-											resolve(true);
-										} else {
-											console.log("There was a problem creating the config files. The bot will now exit.");
-											process.exit(1);
-										}
-									} else {
-										console.log("Encountered an error creating './configs/customcaption.txt'! Error: " + err);
-										process.exit(1);
-									}
-								});
-							}
-						} else {
+						if (err) {
 							console.log("Encountered an error creating './configs/subreddits.txt'! Error: " + err);
 							process.exit(1);
+						} else {
+							console.log("Created subreddits.txt containing a list of subreddits to read from.");
 						}
 					});
 		  		}
+
+				//Create file to store user's custom caption
+		  		if (!fs.existsSync("./configs/customcaption.txt")) {
+					fs.writeFile("./configs/customcaption.txt", "", function(err) {
+						if (err) {
+							console.log("Encountered an error creating './configs/customcaption.txt'! Error: " + err);
+							process.exit(1);
+						} else {
+							console.log("Created missing file: ./configs/customcaption.txt");
+						}
+					});
+				}
+				//Wait a second for everything to be created. There's gotta be a better way to do this, I'll figure it out in the future.
+				setTimeout(function() {
+					//Check if all the config files are present. If so, return true.
+					if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/account.json") && fs.existsSync("./configs/subreddits.txt")) {
+						resolve(true);
+					} else {
+						console.log("There was a problem creating the config files. The bot will now exit.");
+						process.exit(1);
+					}
+				}, 1000);
 			} else {
 				console.log("Encountered an error creating './configs/account.json'! Error: " + err);
 				process.exit(1);
@@ -177,7 +225,7 @@ async function createConfigs(subreddits, logindetails) {
 }
 
 //Asks the user for their password
-async function askPassword(username) {
+async function askQuestion(question) {
 	return new Promise(function(resolve, reject) {
 		//Hook to console
 		var readline = require('readline');
@@ -185,7 +233,7 @@ async function askPassword(username) {
 		  	input: process.stdin,
 		  	output: process.stdout
 		});
-		rl.question("What is the password associated with '" + username + "'? (Required to login) \n", function (answer) {
+		rl.question(question, function (answer) {
 			rl.close();
 			resolve(answer);
 		});
@@ -194,20 +242,46 @@ async function askPassword(username) {
 
 //Login to Instagram
 async function login(username, password) {
-  	//Basic login procedure
+	//Generates a ID for Instagram
   	ig.state.generateDevice(username);
-  	await ig.account.login(username, password);
+  	//Login procedure
+  	await Bluebird.try(async() => {
+  		//Execute usual requests in the android app, not required but reduces suspicion from Instagram
+		await ig.simulate.preLoginFlow();
+		//Login
+		await ig.account.login(username, password);
+		//Execute requests normally done post-login, reduces suspicion
+		process.nextTick(async() => await ig.simulate.postLoginFlow());
+  	}).catch(IgCheckpointError, async() => {
+  		//Instagram wants us to prove that we are human
+  		console.log("Human verification received from Instagram! Solving challenge...");
+		//Initiates the challenge
+  		await ig.challenge.auto(true);
+  		let challenge = ig.state.challenge;
+  		console.log(challenge);
+  		//Asks the user for the code
+  		let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)";
+  		let code = await askQuestion(question);
+  		console.log("hold on");
+  		console.log(await ig.challenge.sendSecurityCode(code));
+  	});
 }
 
 //Makes sure aspect ratio of image can be uploaded to instagram
 function checkRatio(aspectRatio) {
 	aspectRatio = aspectRatio.split(":");
-	if (aspectRatio[0] <= 2048 && aspectRatio[1] <= 2048 || aspectRatio[0] <= 1080 && aspectRatio[1] <= 566 || aspectRatio[0] <= 600 && aspectRatio[1] <= 400) {
-		if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
-			return true;
-		} else {
+	//Define the allowed height and width ratio of the image
+	let allowedWidth = [2048, 1080, 600];
+	let allowedHeight = [2048, 566, 400];
+	//Loops through to check
+	for (var i = 0; i < allowedWidth.length; i++) {
+		if (!aspectRatio[0] <= allowedWidth[i] && !aspectRatio[1] <= allowedHeight[i]) {
 			return false;
 		}
+	}
+
+	if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
+		return true;
 	} else {
 		return false;
 	}
@@ -420,7 +494,7 @@ function formatForInsta(dir) {
 	for (var i = 0; i < extensions.length; i++) {
 		dir = dir.replace(replacement[i], replacement[i]);
 	}
-	
+
 	return dir;
 }
 
@@ -430,6 +504,7 @@ function contains(target, pattern){
     pattern.forEach(function(word){
       value = value + target.includes(word);
     });
+
     return (value === 1);
 }
 
@@ -463,7 +538,7 @@ function formatFileName(postTitle, postUrl, nsfw) {
 	    } else if (contains(postTitle, forbiddenWords)) {
 			console.log("Image: " + postTitle + " is rejected due to the title having reddit related words");
 			filename = "./assets/images/rejected/" + postTitle + path.extname(postUrl);
-		//I have no clue what the stuff below does, but I'm just gonna leave it here in case
+		//Checks if the file was previously downloaded. If it is, returns the path of the old file and thus it will not be downloaded again
 		} else if (fs.existsSync("./assets/images/uploaded/" + postTitle + path.extname(postUrl))) {
 			filename = "./assets/images/uploaded/" + postTitle + path.extname(postUrl);
 		} else if (fs.existsSync("./assets/images/error/" + postTitle + path.extname(postUrl))) {
@@ -489,7 +564,8 @@ async function download(url, postTitle, nsfw) {
 		return;
 	//Format the file name so that it can be stored in filesystem
 	let filename = await formatFileName(postTitle, url, nsfw);
-		request.head(url, function(err, res, body) {
+	request.head(url, function(err, res, body) {
+		//If the file already exists, it means that it was downloaded before, thus it will not download again.
 		if (!fs.existsSync(filename)) {
 			var filetoPipe = fs.createWriteStream(filename);
 			filetoPipe.on('open', function() {
@@ -536,17 +612,24 @@ async function instagram() {
 	var configs = require('./configs/account.json');
 	var customcaption = require("./configs/customcaption.txt");
 
-	//Request for user's Instagram password
-	var insta_password = await askPassword(configs["insta_username"]);
+	//Request for user's Instagram password if they did not store it in account.json
+	if (!configs["insta_password"]) {
+		let question = "What is the password associated with '" + configs["insta_username"] + "'? (Required to login) \n";
+		var insta_password = await askQuestion(question);
+	} else {
+		var insta_password = configs["insta_password"];
+	}
 
 	//Activates reddit crawler
-	snoopReddit();
+	//snoopReddit();
 
 	//Create a new Instagram session
 	await login(configs["insta_username"], insta_password);
 
+	console.log("Successfully logged in to Instagram!");
+
 	//-- Upload every (25) minutes --//
-	//You may change the upload frequency if you wish.
+	//You may change the upload frequency if you wish. (The number below is in milliseconds)
 	setInterval(chooseInstaPhoto, 1.5e+6);
 }
 
