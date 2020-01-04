@@ -414,22 +414,13 @@ async function stringSubreddits() {
 
 //Formats caption to submit to ig
 function formatForInsta(dir) {
-	//Remove file extensions from caption
-	dir = dir.replace(".jpg", "");
-	dir = dir.replace(".jpeg", "");
-	dir = dir.replace(".png", "");
-
-	//Add back special characters
-	dir = dir.replace(/\[q\]/g, "?");
-	dir = dir.replace(/\[s\]/g, "/");
-	dir = dir.replace(/\[l\]/g, "<");
-	dir = dir.replace(/\[m\]/g, ">");
-	dir = dir.replace(/\[quo\]/g, "\"");
-	dir = dir.replace(/\[st\]/g, "*");
-
-	//Replaces "my" to "this"
-	dir = dir.replace(/my /g, "this ");
-
+	//Remove file extensions from caption and add back special characters
+	let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, "", "", ""];
+	let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", ".jpg", ".jpeg", ".png"];
+	for (var i = 0; i < extensions.length; i++) {
+		dir = dir.replace(replacement[i], replacement[i]);
+	}
+	
 	return dir;
 }
 
@@ -460,7 +451,7 @@ async function replaceSpecialChars(postTitle) {
 //Formats file name to save to Filesystem
 function formatFileName(postTitle, postUrl, nsfw) {
 	return new Promise(async function(resolve, reject) {
-		let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i "];
+		let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i ", "my "];
 		//Reformats the filename so that it complies with window's strict filesystem rules
 		postTitle = await replaceSpecialChars(postTitle);
 
