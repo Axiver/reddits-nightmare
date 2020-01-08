@@ -1,7 +1,7 @@
 //Initialise required libraries
 const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
 const ig = new IgApiClient();
-const Bluebird = require("Bluebird");
+const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require('request');
 var path = require('path');
