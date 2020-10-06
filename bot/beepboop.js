@@ -1,7 +1,7 @@
 //Initialise required libraries
 const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
 const ig = new IgApiClient();
-const Bluebird = require("Bluebird");
+const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require('request');
 var path = require('path');
@@ -526,6 +526,10 @@ async function chooseInstaPhoto() {
 					if (err)
 						console.log("Error encountered while unapproving image: " + err);
 				});
+
+				//Upload another image by repeating the process
+				console.log("Uploading a different image...");
+				chooseInstaPhoto();
 			}
 		});
 	}
@@ -582,8 +586,8 @@ async function stringSubreddits() {
 //Formats caption to submit to ig
 function formatForInsta(dir) {
 	//Remove file extensions from caption and add back special characters
-	let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, "", "", ""];
-	let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", ".jpg", ".jpeg", ".png"];
+	let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g, "", "", ""];
+	let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]", ".jpg", ".jpeg", ".png"];
 	for (var i = 0; i < specialCharacters.length; i++) {
 		dir = dir.replace(replacement[i], specialCharacters[i]);
 	}
@@ -604,8 +608,8 @@ function contains(target, pattern){
 //Replaces special characters in the filename of files
 async function replaceSpecialChars(postTitle) {
 	return new Promise(function(resolve, reject) {
-		let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g];
-		let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]"];
+		let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g];
+		let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]"];
 
 		//Replace special characters into filesystem-compatible ones
 		for (var i = 0; i < specialCharacters.length; i++) {
@@ -721,6 +725,8 @@ async function instagram() {
 	//-- Upload every (25) minutes --//
 	//You may change the upload frequency if you wish. (The number below is in milliseconds)
 	setInterval(chooseInstaPhoto, 1.5e+6);
+
+	chooseInstaPhoto();
 }
 
 //Activates the bot
