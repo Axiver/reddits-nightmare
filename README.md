@@ -32,7 +32,7 @@ It will then ask you several questions. To find out what these questions mean an
 
 ##### Manual
 
-Setting up manually is highly disencouraged as human error will likely occur.
+Setting up manually is highly discouraged as human error will likely occur.
 But maybe you're adventurous. Head on over to the [manual installation guide](https://github.com/Garlicvideos/reddits-nightmare/wiki/Manual-Installation) for instructions on how to setup this bot by yourself, without the help of modern technology.
 
 #### Modification of files
