@@ -674,6 +674,16 @@ async function download(url, postTitle, nsfw) {
 	});
 };
 
+//Gets the custom caption set by the user in customcaption.txt
+function getCustomCaption() {
+	return new Promise((resolve, reject) => {
+		//Reads the file
+		fs.readFile('./configs/customcaption.txt', "utf8", async function(err, data) {
+			resolve(data);
+		});
+	});
+}
+
 //Crawls reddit for popular posts to leech on
 async function snoopReddit() {
 	//Configure the crawler
@@ -706,7 +716,8 @@ async function instagram() {
 	//-- Login to Instagram --//
 	//Load config files
 	var configs = require('./configs/account.json');
-	var customcaption = require("./configs/customcaption.txt");
+	var customcaption = getCustomCaption();
+
 
 	//Request for user's Instagram password if they did not store it in account.json
 	if (!configs["insta_password"]) {
@@ -726,7 +737,7 @@ async function instagram() {
 	//You may change the upload frequency if you wish. (The number below is in milliseconds)
 	setInterval(chooseInstaPhoto, 1.5e+6);
 
-	chooseInstaPhoto();
+	//chooseInstaPhoto();
 }
 
 //Activates the bot
