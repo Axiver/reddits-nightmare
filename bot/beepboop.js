@@ -8,7 +8,6 @@ var path = require('path');
 var sizeOf = require('image-size');
 var ratio = require('aspect-ratio');
 const { createWorker } = require('tesseract.js');
-var customcaption = ""; //Temporary global variable. To be implemented as a feature.
 
 //Initialize WordPOS library (Finds adjectives and verbs and nouns, that cool stuff)
 var WordPOS = require('wordpos'),
@@ -467,7 +466,8 @@ async function postToInsta(filename, caption) {
 	var configs = require('./configs/account.json');
 	let path = "./assets/images/approved/" + filename;
 	let hashtags = await autoHashtag(caption.toLowerCase(), configs, "./assets/images/approved/" + filename);
-	let finalCaption = caption + "\n\n\n" + hashtags;
+	let customcaption = await getCustomCaption();
+	let finalCaption = caption + customcaption + "\n\n\n" + hashtags;
 	//Uploads the image to Instagram
 	var upload = await ig.publish.photo({
 		//Reads the file into buffer before uploading
@@ -506,8 +506,10 @@ async function chooseInstaPhoto() {
 		return;
 	} else {
 		//Change the caption from filesystem format back to human readable format
-		caption = formatForInsta(post);
+		let caption = formatForInsta(post);
 		console.log("Uploading post with caption: " + caption);
+
+		//Obtain the size of the image
 		sizeOf("./assets/images/approved/" + post, function (err, dimensions) {
 			if (err) {
 				console.log("Error uploading image to Instagram: " + err);
@@ -716,7 +718,6 @@ async function instagram() {
 	//-- Login to Instagram --//
 	//Load config files
 	var configs = require('./configs/account.json');
-	var customcaption = getCustomCaption();
 
 
 	//Request for user's Instagram password if they did not store it in account.json
@@ -737,7 +738,7 @@ async function instagram() {
 	//You may change the upload frequency if you wish. (The number below is in milliseconds)
 	setInterval(chooseInstaPhoto, 1.5e+6);
 
-	//chooseInstaPhoto();
+	chooseInstaPhoto();
 }
 
 //Activates the bot
