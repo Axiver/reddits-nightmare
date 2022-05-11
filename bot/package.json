@@ -4,7 +4,7 @@
   "description": "A bot that reuploads popular posts from subreddits onto Instagram",
   "main": "beepboop.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node beepboop.js"
   },
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "aspect-ratio": "^2.1.1",
     "fs": "0.0.1-security",
     "image-size": "^0.8.3",
-    "instagram-private-api": "^1.37.1",
+    "instagram-private-api": "^1.45.3",
     "path": "^0.12.7",
     "readline": "^1.3.0",
     "reddit-snooper": "^1.0.1",
