@@ -1,18 +1,13 @@
 //Initialise required libraries
-const {
-  IgApiClient,
-  IgCheckpointError,
-  IgLoginBadPasswordError,
-  IgChallengeWrongCodeError,
-} = require("instagram-private-api");
+const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
 const ig = new IgApiClient();
 const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require("request");
+var path = require("path");
+var sizeOf = require("image-size");
+var ratio = require("aspect-ratio");
 const { createWorker } = require("tesseract.js");
-let path = require("path");
-let sizeOf = require("image-size");
-let ratio = require("aspect-ratio");
 
 //Initialize WordPOS library (Finds adjectives and verbs and nouns, that cool stuff)
 let WordPOS = require("wordpos"),
@@ -81,12 +76,8 @@ async function setup() {
               resolve("Setup complete. Booting!");
             }
           } else {
-            console.log(
-              "Okay, but you need to perform manual setup or the bot will refuse to start."
-            );
-            console.log(
-              "Read the documentation at https://github.com/Garlicvideos/reddits-nightmare/wiki for more information."
-            );
+            console.log("Okay, but you need to perform manual setup or the bot will refuse to start.");
+            console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare/wiki for more information.");
             //End readline and exit nodejs
             rl.close();
             process.exit(0);
@@ -104,97 +95,82 @@ async function setupInstagram(rl) {
   return new Promise(function (resolve, reject) {
     let settings = {};
     rl.resume();
-    rl.question(
-      "\nWhat is your Instagram account username? \n",
-      async function (answer) {
-        settings["insta_username"] = answer;
-        rl.question(
-          "\nWould you like the bot to automatically generate hashtags for you? [y/cancel] \n",
-          async function (answer) {
-            answer = answer.toLowerCase();
-            if (answer == "y" || answer == "yes") {
-              settings["autohashtags"] = "yes";
-            } else {
-              settings["autohashtags"] = "no";
-            }
-            rl.question(
-              "\nWould you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n",
-              async function (answer) {
-                answer = answer.toLowerCase();
-                if (answer == "y" || answer == "yes") {
-                  settings["ocr"] = "yes";
-                } else {
-                  settings["ocr"] = "no";
-                }
-                rl.question(
-                  "\nHow would you like the bot to sort? (Defaults to hot) [hot/top_24/top_day/controversial/rising] \n",
-                  async function (answer) {
-                    //Pause it for the time being, in case the user spams inputs
-                    rl.pause();
-                    answer = answer.toLowerCase();
-                    switch (answer) {
-                      case "hot":
-                        settings["sort"] = "hot";
-                        break;
-                      case "top_24":
-                        settings["sort"] = "top_24";
-                        break;
-                      case "top_day":
-                        settings["sort"] = "top_day";
-                        break;
-                      case "controversial":
-                        settings["sort"] = "controversial";
-                        break;
-                      case "rising":
-                        settings["sort"] = "rising";
-                        break;
-                      default:
-                        settings["sort"] = "hot";
-                        console.log(
-                          "Invalid response received, defaulting to 'hot'"
-                        );
-                    }
-                    rl.resume();
-                    rl.question(
-                      "\nHow many posts would you like to monitor? (E.g. Top 10 posts of hot | Defaults to 15) [1-100]\n",
-                      async function (answer) {
-                        if (!isNaN(answer) && answer > 0) {
-                          settings["top"] = answer;
-                        } else {
-                          console.log(
-                            "Invalid response received, defaulting to 15."
-                          );
-                          settings["top"] = 15;
-                        }
+    rl.question("\nWhat is your Instagram account username? \n", async function (answer) {
+      settings["insta_username"] = answer;
+      rl.question("\nWould you like the bot to automatically generate hashtags for you? [y/cancel] \n", async function (answer) {
+        answer = answer.toLowerCase();
+        if (answer == "y" || answer == "yes") {
+          settings["autohashtags"] = "yes";
+        } else {
+          settings["autohashtags"] = "no";
+        }
+        rl.question("\nWould you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n", async function (answer) {
+          answer = answer.toLowerCase();
+          if (answer == "y" || answer == "yes") {
+            settings["ocr"] = "yes";
+          } else {
+            settings["ocr"] = "no";
+          }
+          rl.question(
+            "\nHow would you like the bot to sort? (Defaults to hot) [hot/top_24/top_day/controversial/rising] \n",
+            async function (answer) {
+              //Pause it for the time being, in case the user spams inputs
+              rl.pause();
+              answer = answer.toLowerCase();
+              switch (answer) {
+                case "hot":
+                  settings["sort"] = "hot";
+                  break;
+                case "top_24":
+                  settings["sort"] = "top_24";
+                  break;
+                case "top_day":
+                  settings["sort"] = "top_day";
+                  break;
+                case "controversial":
+                  settings["sort"] = "controversial";
+                  break;
+                case "rising":
+                  settings["sort"] = "rising";
+                  break;
+                default:
+                  settings["sort"] = "hot";
+                  console.log("Invalid response received, defaulting to 'hot'");
+              }
+              rl.resume();
+              rl.question(
+                "\nHow many posts would you like to monitor? (E.g. Top 10 posts of hot | Defaults to 15) [1-100]\n",
+                async function (answer) {
+                  if (!isNaN(answer) && answer > 0) {
+                    settings["top"] = answer;
+                  } else {
+                    console.log("Invalid response received, defaulting to 15.");
+                    settings["top"] = 15;
+                  }
+                  rl.question(
+                    '\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. (It is not recommended to enable this as you only need to type in your password once every now and then anyways, due to the usage of sessions)\n',
+                    async function (answer) {
+                      answer = answer.toLowerCase();
+                      if (answer == "y" || answer == "yes") {
                         rl.question(
-                          '\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. (It is not recommended to enable this as you only need to type in your password once every now and then anyways, due to the usage of sessions)\n',
+                          '\nWhat is the password associated with Instagram account "' + settings["insta_username"] + '"?\n',
                           async function (answer) {
-                            answer = answer.toLowerCase();
-                            if (answer == "y" || answer == "yes") {
-                              rl.question(
-                                '\nWhat is the password associated with Instagram account "' +
-                                  settings["insta_username"] +
-                                  '"?\n',
-                                async function (answer) {
-                                  settings["insta_password"] = answer;
-                                  resolve(JSON.stringify(settings));
-                                }
-                              );
-                            } else {
-                              resolve(JSON.stringify(settings));
-                            }
+                            settings["insta_password"] = answer;
+                            resolve(JSON.stringify(settings));
                           }
                         );
+                      } else {
+                        resolve(JSON.stringify(settings));
                       }
-                    );
-                  }
-                );
-              }
-            );
-          }
-        );
-      }
-    );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        });
+      });
+    });
   });
 }
 
@@ -233,15 +209,10 @@ async function createConfigs(subreddits, logindetails) {
         if (!fs.existsSync("./configs/subreddits.txt")) {
           fs.writeFile("./configs/subreddits.txt", subreddits, function (err) {
             if (err) {
-              console.log(
-                "Encountered an error creating './configs/subreddits.txt'! Error: " +
-                  err
-              );
+              console.log("Encountered an error creating './configs/subreddits.txt'! Error: " + err);
               process.exit(1);
             } else {
-              console.log(
-                "Created subreddits.txt containing a list of subreddits to read from."
-              );
+              console.log("Created subreddits.txt containing a list of subreddits to read from.");
             }
           });
         }
@@ -250,10 +221,7 @@ async function createConfigs(subreddits, logindetails) {
         if (!fs.existsSync("./configs/customcaption.txt")) {
           fs.writeFile("./configs/customcaption.txt", "", function (err) {
             if (err) {
-              console.log(
-                "Encountered an error creating './configs/customcaption.txt'! Error: " +
-                  err
-              );
+              console.log("Encountered an error creating './configs/customcaption.txt'! Error: " + err);
               process.exit(1);
             } else {
               console.log("Created missing file: ./configs/customcaption.txt");
@@ -263,24 +231,15 @@ async function createConfigs(subreddits, logindetails) {
         //Wait a second for everything to be created. There's gotta be a better way to do this, I'll figure it out in the future.
         setTimeout(function () {
           //Check if all the config files are present. If so, return true.
-          if (
-            fs.existsSync("./configs/customcaption.txt") &&
-            fs.existsSync("./configs/account.json") &&
-            fs.existsSync("./configs/subreddits.txt")
-          ) {
+          if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/account.json") && fs.existsSync("./configs/subreddits.txt")) {
             resolve(true);
           } else {
-            console.log(
-              "There was a problem creating the config files. The bot will now exit."
-            );
+            console.log("There was a problem creating the config files. The bot will now exit.");
             process.exit(1);
           }
         }, 1000);
       } else {
-        console.log(
-          "Encountered an error creating './configs/account.json'! Error: " +
-            err
-        );
+        console.log("Encountered an error creating './configs/account.json'! Error: " + err);
         process.exit(1);
       }
     });
@@ -305,14 +264,9 @@ async function askQuestion(question) {
 
 //Save session cookie
 function saveSession(cookie) {
-  fs.writeFile(
-    "./cookies/session.json",
-    JSON.stringify(cookie),
-    function (err, result) {
-      if (err)
-        console.log("There was an error while saving session data: " + err);
-    }
-  );
+  fs.writeFile("./cookies/session.json", JSON.stringify(cookie), function (err, result) {
+    if (err) console.log("There was an error while saving session data: " + err);
+  });
   return cookie;
 }
 
@@ -332,8 +286,7 @@ function loadSession() {
 async function solveChallenge() {
   return new Promise(async function (resolve, reject) {
     //Asks the user for the code
-    let question =
-      "What is the code Instagram sent you? (It can be found in your Email/SMS)\n";
+    let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)\n";
     let code = await askQuestion(question);
     //Sends the code to Instagram
     await Bluebird.try(async () => {
@@ -400,25 +353,15 @@ async function login(username, password) {
         .catch(IgLoginBadPasswordError, async () => {
           //The password entered is wrong, so we ask the user for the correct one
           let correctPassword = await askQuestion(
-            "\nThe password for the Instagram account '" +
-              username +
-              "'' is incorrect. Please type the correct password.\n"
+            "\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n"
           );
           //Save the correct one to account.json if "Remember me" is enabled
           let configs = require("./configs/account.json");
           if (configs["insta_password"]) {
             configs["insta_password"] = correctPassword;
-            fs.writeFile(
-              "./configs/account.json",
-              JSON.stringify(configs),
-              function (err) {
-                if (err)
-                  console.log(
-                    "There was an error while trying to update account.json with the new password: " +
-                      err
-                  );
-              }
-            );
+            fs.writeFile("./configs/account.json", JSON.stringify(configs), function (err) {
+              if (err) console.log("There was an error while trying to update account.json with the new password: " + err);
+            });
           }
           //Attempt to relogin
           login(username, correctPassword);
@@ -427,9 +370,7 @@ async function login(username, password) {
           //-- This portion should THEORETICALLY work. I've never had my account get challenged before, so I have nothing to test it on.
           //-- In the event that this does not work, please open a new issue at https://github.com/Garlicvideos/reddits-nightmare/issues/new
           //Instagram wants us to prove that we are human
-          console.log(
-            "Human verification received from Instagram! Solving challenge..."
-          );
+          console.log("Human verification received from Instagram! Solving challenge...");
           //Initiates the challenge
           await Bluebird.try(async () => {
             await ig.challenge.auto(true);
@@ -457,10 +398,7 @@ function checkRatio(aspectRatio) {
   let allowedHeight = [2048, 566, 400];
   //Loops through to check
   for (var i = 0; i < allowedWidth.length; i++) {
-    if (
-      aspectRatio[0] <= allowedWidth[i] &&
-      aspectRatio[1] <= allowedHeight[i]
-    ) {
+    if (aspectRatio[0] <= allowedWidth[i] && aspectRatio[1] <= allowedHeight[i]) {
       if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
         return true;
       } else {
@@ -507,8 +445,7 @@ async function filterAdjectives(nouns, adjective) {
 async function ocr(myImage) {
   return new Promise(async function (resolve, reject) {
     const worker = createWorker({
-      logger: (m) =>
-        console.log("[OCR] '" + myImage + "' : ", m["progress"] * 100 + "%"),
+      logger: (m) => console.log("[OCR] '" + myImage + "' : ", m["progress"] * 100 + "%"),
     });
     await worker.load();
     await worker.loadLanguage("eng");
@@ -544,15 +481,10 @@ async function autoHashtag(caption, config, myImage) {
       } else {
         var ocrtext = "";
       }
-      let hashtags = await getNounsAdjectives(
-        wordpos,
-        caption + " " + ocrtext.toLowerCase()
-      );
+      let hashtags = await getNounsAdjectives(wordpos, caption + " " + ocrtext.toLowerCase());
       resolve(hashtags);
     } else {
-      console.log(
-        "Your account.json file is broken. Please delete it and rerun the bot."
-      );
+      console.log("Your account.json file is broken. Please delete it and rerun the bot.");
       resolve(hashtags);
     }
   });
@@ -563,12 +495,9 @@ async function postToInsta(filename, caption) {
   //Declare some variables
   var configs = require("./configs/account.json");
   let path = "./assets/images/approved/" + filename;
-  let hashtags = await autoHashtag(
-    caption.toLowerCase(),
-    configs,
-    "./assets/images/approved/" + filename
-  );
-  let finalCaption = caption + "\n\n\n" + hashtags;
+  let hashtags = await autoHashtag(caption.toLowerCase(), configs, "./assets/images/approved/" + filename);
+  let customcaption = await getCustomCaption();
+  let finalCaption = caption + customcaption + "\n\n\n" + hashtags;
   //Uploads the image to Instagram
   var upload = await ig.publish
     .photo({
@@ -580,36 +509,18 @@ async function postToInsta(filename, caption) {
       if (result.status == "ok") {
         console.log("Uploaded image '" + caption + "' to Instagram.");
         //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
-        fs.rename(
-          "./assets/images/approved/" + filename,
-          "./assets/images/uploaded/" + filename,
-          function (err) {
-            if (err)
-              console.log(
-                "There was an error while trying to mark the image as uploaded: " +
-                  err
-              );
-            else console.log("Image has been marked as uploaded!");
-          }
-        );
+        fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function (err) {
+          if (err) console.log("There was an error while trying to mark the image as uploaded: " + err);
+          else console.log("Image has been marked as uploaded!");
+        });
       }
     })
     .catch(function (err) {
-      console.log(
-        "There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " +
-          err
-      );
-      fs.rename(
-        "./assets/images/approved/" + filename,
-        "./assets/images/error/" + filename,
-        function (err) {
-          if (err)
-            console.log(
-              "There was an error while trying to unapprove the image: " + err
-            );
-          else console.log("The image has been unapproved.");
-        }
-      );
+      console.log("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
+      fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, function (err) {
+        if (err) console.log("There was an error while trying to unapprove the image: " + err);
+        else console.log("The image has been unapproved.");
+      });
     });
 }
 
@@ -624,8 +535,10 @@ async function chooseInstaPhoto() {
     return;
   } else {
     //Change the caption from filesystem format back to human readable format
-    caption = formatForInsta(post);
+    let caption = formatForInsta(post);
     console.log("Uploading post with caption: " + caption);
+
+    //Obtain the size of the image
     sizeOf("./assets/images/approved/" + post, function (err, dimensions) {
       if (err) {
         console.log("Error uploading image to Instagram: " + err);
@@ -639,17 +552,10 @@ async function chooseInstaPhoto() {
       if (checkRatio(aspectRatio)) {
         postToInsta(post, caption);
       } else {
-        console.log(
-          "Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio"
-        );
-        fs.rename(
-          "./assets/images/approved/" + post,
-          "./assets/images/error/" + post,
-          function (err) {
-            if (err)
-              console.log("Error encountered while unapproving image: " + err);
-          }
-        );
+        console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
+        fs.rename("./assets/images/approved/" + post, "./assets/images/error/" + post, function (err) {
+          if (err) console.log("Error encountered while unapproving image: " + err);
+        });
 
         //Upload another image by repeating the process
         console.log("Uploading a different image...");
@@ -666,9 +572,7 @@ async function fixSubreddits(array) {
     array.forEach(function (element) {
       i++;
       if (element.length < 2) {
-        console.log(
-          "Found a subreddit that does not reach the 2 character minimum, fixing..."
-        );
+        console.log("Found a subreddit that does not reach the 2 character minimum, fixing...");
         array.splice(i, 1, "");
       }
     });
@@ -689,26 +593,22 @@ async function stringSubreddits() {
         console.log("Created missing file 'subreddits.txt' in './configs'");
       });
     } else {
-      fs.readFile(
-        "./configs/subreddits.txt",
-        "utf8",
-        async function (err, data) {
-          if (data == "") {
-            data = "all";
-            console.log("Subreddit list is empty, defaulting to r/all.");
-            fs.writeFile("./configs/subreddits.txt", "all", function () {});
-          }
-          let array = data.split(",");
-          let content = await fixSubreddits(array);
-          if (content != data) {
-            fs.writeFile("./configs/subreddits.txt", content, function () {
-              console.log("Fixed the subreddit list");
-            });
-          }
-          content = content.replace(/,/g, "+");
-          resolve(content);
+      fs.readFile("./configs/subreddits.txt", "utf8", async function (err, data) {
+        if (data == "") {
+          data = "all";
+          console.log("Subreddit list is empty, defaulting to r/all.");
+          fs.writeFile("./configs/subreddits.txt", "all", function () {});
         }
-      );
+        let array = data.split(",");
+        let content = await fixSubreddits(array);
+        if (content != data) {
+          fs.writeFile("./configs/subreddits.txt", content, function () {
+            console.log("Fixed the subreddit list");
+          });
+        }
+        content = content.replace(/,/g, "+");
+        resolve(content);
+      });
     }
   });
 }
@@ -716,32 +616,8 @@ async function stringSubreddits() {
 //Formats caption to submit to ig
 function formatForInsta(dir) {
   //Remove file extensions from caption and add back special characters
-  let specialCharacters = [
-    /\?/g,
-    /\//g,
-    /\</g,
-    /\>/g,
-    /\"/g,
-    /\*/g,
-    /\\/g,
-    /\:/g,
-    "",
-    "",
-    "",
-  ];
-  let replacement = [
-    "[q]",
-    "[s]",
-    "[l]",
-    "[m]",
-    "[quo]",
-    "[st]",
-    "[bs]",
-    "[col]",
-    ".jpg",
-    ".jpeg",
-    ".png",
-  ];
+  let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g, "", "", ""];
+  let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]", ".jpg", ".jpeg", ".png"];
   for (var i = 0; i < specialCharacters.length; i++) {
     dir = dir.replace(replacement[i], specialCharacters[i]);
   }
@@ -762,26 +638,8 @@ function contains(target, pattern) {
 //Replaces special characters in the filename of files
 async function replaceSpecialChars(postTitle) {
   return new Promise(function (resolve, reject) {
-    let specialCharacters = [
-      /\?/g,
-      /\//g,
-      /\</g,
-      /\>/g,
-      /\"/g,
-      /\*/g,
-      /\\/g,
-      /\:/g,
-    ];
-    let replacement = [
-      "[q]",
-      "[s]",
-      "[l]",
-      "[m]",
-      "[quo]",
-      "[st]",
-      "[bs]",
-      "[col]",
-    ];
+    let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g];
+    let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]"];
 
     //Replace special characters into filesystem-compatible ones
     for (var i = 0; i < specialCharacters.length; i++) {
@@ -794,54 +652,25 @@ async function replaceSpecialChars(postTitle) {
 //Formats file name to save to Filesystem
 function formatFileName(postTitle, postUrl, nsfw) {
   return new Promise(async function (resolve, reject) {
-    let forbiddenWords = [
-      "reddit ",
-      "r/ ",
-      "comments ",
-      "upvote ",
-      "downvote ",
-      "retweet ",
-      "mods ",
-      "me ",
-      "i ",
-      "my ",
-    ];
+    let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i ", "my "];
     //Reformats the filename so that it complies with window's strict filesystem rules
     postTitle = await replaceSpecialChars(postTitle);
 
     let filename;
     //Check if post is NSFW
     if (nsfw == true) {
-      console.log(
-        "Found a potentially NSFW post (Will require manual approval): " +
-          postTitle
-      );
+      console.log("Found a potentially NSFW post (Will require manual approval): " + postTitle);
       filename = "./assets/images/nsfw/" + postTitle + path.extname(postUrl);
     } else if (contains(postTitle, forbiddenWords)) {
-      console.log(
-        "Image: " +
-          postTitle +
-          " is rejected due to the title having reddit related words"
-      );
-      filename =
-        "./assets/images/rejected/" + postTitle + path.extname(postUrl);
+      console.log("Image: " + postTitle + " is rejected due to the title having reddit related words");
+      filename = "./assets/images/rejected/" + postTitle + path.extname(postUrl);
       //Checks if the file was previously downloaded. If it is, returns the path of the old file and thus it will not be downloaded again
-    } else if (
-      fs.existsSync(
-        "./assets/images/uploaded/" + postTitle + path.extname(postUrl)
-      )
-    ) {
-      filename =
-        "./assets/images/uploaded/" + postTitle + path.extname(postUrl);
-    } else if (
-      fs.existsSync(
-        "./assets/images/error/" + postTitle + path.extname(postUrl)
-      )
-    ) {
+    } else if (fs.existsSync("./assets/images/uploaded/" + postTitle + path.extname(postUrl))) {
+      filename = "./assets/images/uploaded/" + postTitle + path.extname(postUrl);
+    } else if (fs.existsSync("./assets/images/error/" + postTitle + path.extname(postUrl))) {
       filename = "./assets/images/error/" + postTitle + path.extname(postUrl);
     } else {
-      filename =
-        "./assets/images/approved/" + postTitle + path.extname(postUrl);
+      filename = "./assets/images/approved/" + postTitle + path.extname(postUrl);
     }
     resolve(filename);
   });
@@ -880,13 +709,9 @@ async function download(url, postTitle, nsfw) {
 function getCustomCaption() {
   return new Promise((resolve, reject) => {
     //Reads the file
-    fs.readFile(
-      "./configs/customcaption.txt",
-      "utf8",
-      async function (err, data) {
-        resolve(data);
-      }
-    );
+    fs.readFile("./configs/customcaption.txt", "utf8", async function (err, data) {
+      resolve(data);
+    });
   });
 }
 
@@ -929,10 +754,7 @@ async function instagram() {
 
   //Request for user's Instagram password if they did not store it in account.json
   if (!configs["insta_password"]) {
-    let question =
-      "What is the password associated with '" +
-      configs["insta_username"] +
-      "'? (Required to login) \n";
+    let question = "What is the password associated with '" + configs["insta_username"] + "'? (Required to login) \n";
     var insta_password = await askQuestion(question);
   } else {
     var insta_password = configs["insta_password"];
