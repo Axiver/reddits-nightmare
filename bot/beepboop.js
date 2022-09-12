@@ -9,14 +9,10 @@ const ratio = require("aspect-ratio");
 const { createWorker } = require("tesseract.js");
 
 //Import utility functions
-const { checkRatio } = require("./utils/index");
+const { checkRatio, generateHashtags } = require("./utils/index");
 
 //Initialise IG API client
 const ig = new IgApiClient();
-
-//Initialize WordPOS library (Finds adjectives and verbs and nouns, that cool stuff)
-const WordPOS = require("wordpos"),
-  wordpos = new WordPOS();
 
 //Initialize reddit api library
 const Snooper = require("reddit-snooper");
@@ -397,38 +393,6 @@ async function login(username, password) {
   });
 }
 
-async function filterNouns(nouns) {
-  return new Promise((resolve) => {
-    for (var i = 0; i < nouns.length; i++) {
-      if (nouns[i].length < 4) {
-        nouns.splice(i, 1);
-        i--;
-      } else {
-        nouns[i] = "#" + nouns[i].toLowerCase();
-      }
-    }
-    resolve(nouns);
-  });
-}
-
-async function filterAdjectives(nouns, adjective) {
-  return new Promise((resolve) => {
-    for (var i = 0; i < adjective.length; i++) {
-      if (adjective[i].length < 4) {
-        adjective.splice(i, 1);
-        i--;
-      } else {
-        adjective[i] = "#" + adjective[i].toLowerCase();
-        if (nouns.includes(adjective[i])) {
-          adjective.splice(i, 1);
-          i--;
-        }
-      }
-    }
-    resolve(adjective);
-  });
-}
-
 //Works black magic on the image being uploaded
 async function ocr(myImage) {
   return new Promise(async function (resolve, reject) {
@@ -446,19 +410,6 @@ async function ocr(myImage) {
   });
 }
 
-async function getNounsAdjectives(wordpos, caption) {
-  return new Promise((resolve) => {
-    wordpos.getNouns(caption, async function (result) {
-      let nouns = await filterNouns(result);
-      wordpos.getAdjectives(caption, async function (result) {
-        let adjective = await filterAdjectives(nouns, result);
-        let hashtags = nouns.join(" ") + " " + adjective.join(" ");
-        resolve(hashtags);
-      });
-    });
-  });
-}
-
 //Generates hashtags for the post
 async function autoHashtag(caption, config, myImage) {
   return new Promise(async function (resolve, reject) {
@@ -469,7 +420,7 @@ async function autoHashtag(caption, config, myImage) {
       } else {
         var ocrtext = "";
       }
-      let hashtags = await getNounsAdjectives(wordpos, caption + " " + ocrtext.toLowerCase());
+      let hashtags = await generateHashtags(wordpos, caption + " " + ocrtext.toLowerCase());
       resolve(hashtags);
     } else {
       console.log("Your account.json file is broken. Please delete it and rerun the bot.");
