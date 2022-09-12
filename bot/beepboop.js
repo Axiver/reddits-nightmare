@@ -1,26 +1,31 @@
-//Initialise required libraries
+//-- Import required libraries --//
 const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
-const ig = new IgApiClient();
 const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require("request");
-var path = require("path");
-var sizeOf = require("image-size");
-var ratio = require("aspect-ratio");
+const path = require("path");
+const sizeOf = require("image-size");
+const ratio = require("aspect-ratio");
 const { createWorker } = require("tesseract.js");
 
+//Import utility functions
+const { checkRatio } = require("./utils/index");
+
+//Initialise IG API client
+const ig = new IgApiClient();
+
 //Initialize WordPOS library (Finds adjectives and verbs and nouns, that cool stuff)
-let WordPOS = require("wordpos"),
+const WordPOS = require("wordpos"),
   wordpos = new WordPOS();
 
 //Initialize reddit api library
-let Snooper = require("reddit-snooper");
-let snooper = new Snooper({
+const Snooper = require("reddit-snooper");
+const snooper = new Snooper({
   automatic_retries: true, // automatically handles condition when reddit says 'you are doing this too much'
   api_requests_per_minute: 60, // api requests will be spread out in order to play nicely with Reddit
 });
 
-//Functions
+//-- Functions --//
 //Directory creation
 async function makeDirs() {
   return new Promise(function (resolve, reject) {
@@ -54,6 +59,7 @@ async function setup() {
     if (!fs.existsSync("./configs/account.json")) {
       //If no, perform first time setup
       console.log("Performing first time setup");
+
       //Hook to console
       var readline = require("readline");
       var rl = readline.createInterface({
@@ -365,6 +371,7 @@ async function login(username, password) {
           }
           //Attempt to relogin
           login(username, correctPassword);
+          resolve();
         })
         .catch(IgCheckpointError, async () => {
           //-- This portion should THEORETICALLY work. I've never had my account get challenged before, so I have nothing to test it on.
@@ -388,25 +395,6 @@ async function login(username, password) {
         });
     }
   });
-}
-
-//Makes sure aspect ratio of image can be uploaded to instagram
-function checkRatio(aspectRatio) {
-  aspectRatio = aspectRatio.split(":");
-  //Define the allowed height and width ratio of the image
-  let allowedWidth = [2048, 1080, 600];
-  let allowedHeight = [2048, 566, 400];
-  //Loops through to check
-  for (var i = 0; i < allowedWidth.length; i++) {
-    if (aspectRatio[0] <= allowedWidth[i] && aspectRatio[1] <= allowedHeight[i]) {
-      if (aspectRatio[0] + ":" + aspectRatio[1] != "4:3") {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-  return false;
 }
 
 async function filterNouns(nouns) {
