@@ -1,18 +1,18 @@
 //-- Import required libraries --//
-const { IgApiClient, IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
+const { IgApiClient } = require("instagram-private-api");
 const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require("request");
 const path = require("path");
 const sizeOf = require("image-size");
 const ratio = require("aspect-ratio");
-const { createWorker } = require("tesseract.js");
-
-//Import utility functions
-const { checkRatio, generateHashtags } = require("./utils/index");
 
 //Initialise IG API client
 const ig = new IgApiClient();
+
+//Import utility functions and libs
+const { checkRatio, contains, replaceSpecialChars, restoreSpecialCharacters } = require("./utils/index");
+const { login, postToInsta } = require("./libs/index");
 
 //Initialize reddit api library
 const Snooper = require("reddit-snooper");
@@ -264,205 +264,6 @@ async function askQuestion(question) {
   });
 }
 
-//Save session cookie
-function saveSession(cookie) {
-  fs.writeFile("./cookies/session.json", JSON.stringify(cookie), function (err, result) {
-    if (err) console.log("There was an error while saving session data: " + err);
-  });
-  return cookie;
-}
-
-//Check if a session exists
-function findSession() {
-  //Checks if the file exists
-  return fs.existsSync("./cookies/session.json");
-}
-
-//Load the session
-function loadSession() {
-  let session = require("./cookies/session.json");
-  return session;
-}
-
-//Sends the challenge code to Instagram
-async function solveChallenge() {
-  return new Promise(async function (resolve, reject) {
-    //Asks the user for the code
-    let question = "What is the code Instagram sent you? (It can be found in your Email/SMS)\n";
-    let code = await askQuestion(question);
-    //Sends the code to Instagram
-    await Bluebird.try(async () => {
-      console.log(await ig.challenge.sendSecurityCode(code));
-      if (ig.account) {
-        //Serialize session cookie (This gets invoked after every call to Instagram)
-        ig.request.end$.subscribe(async () => {
-          const serialized = await ig.state.serialize();
-          delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
-          saveSession(serialized);
-        });
-        console.log("Successfully logged in to Instagram!");
-        resolve();
-      }
-    }).catch(IgChallengeWrongCodeError, async () => {
-      //The code entered was wrong, so we call this function again
-      console.log("The code given was incorrect! Please type it in again.");
-      solveChallenge();
-    });
-  });
-}
-
-//Login to Instagram
-async function login(username, password) {
-  return new Promise(async function (resolve, reject) {
-    //Generates a ID for Instagram
-    ig.state.generateDevice(username);
-    //Check if the cookie exists
-    if (findSession()) {
-      //Imports the saved cookie
-      await ig.state.deserialize(loadSession());
-      if (ig.account) {
-        //Serialize session cookie (This gets invoked after every call to Instagram)
-        ig.request.end$.subscribe(async () => {
-          const serialized = await ig.state.serialize();
-          delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
-          saveSession(serialized);
-        });
-        console.log("Successfully logged in to Instagram!");
-        resolve();
-      } else {
-        //Attempt to relogin
-        login(username, password);
-      }
-    } else {
-      //Login procedure
-      await Bluebird.try(async () => {
-        //Execute usual requests in the android app, not required but reduces suspicion from Instagram
-        // XXX await ig.simulate.preLoginFlow();
-        //Login
-        if (await ig.account.login(username, password)) {
-          //Serialize session cookie (This gets invoked after every call to Instagram)
-          ig.request.end$.subscribe(async () => {
-            const serialized = await ig.state.serialize();
-            delete serialized.constants; //This deletes the version info, so you'll always use the version provided by the library
-            saveSession(serialized);
-          });
-          console.log("Successfully logged in to Instagram!");
-          resolve();
-        }
-        //Execute requests normally done post-login, reduces suspicion
-        // XXX process.nextTick(async() => await ig.simulate.postLoginFlow());
-      })
-        .catch(IgLoginBadPasswordError, async () => {
-          //The password entered is wrong, so we ask the user for the correct one
-          let correctPassword = await askQuestion(
-            "\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n"
-          );
-          //Save the correct one to account.json if "Remember me" is enabled
-          let configs = require("./configs/account.json");
-          if (configs["insta_password"]) {
-            configs["insta_password"] = correctPassword;
-            fs.writeFile("./configs/account.json", JSON.stringify(configs), function (err) {
-              if (err) console.log("There was an error while trying to update account.json with the new password: " + err);
-            });
-          }
-          //Attempt to relogin
-          login(username, correctPassword);
-          resolve();
-        })
-        .catch(IgCheckpointError, async () => {
-          //-- This portion should THEORETICALLY work. I've never had my account get challenged before, so I have nothing to test it on.
-          //-- In the event that this does not work, please open a new issue at https://github.com/Garlicvideos/reddits-nightmare/issues/new
-          //Instagram wants us to prove that we are human
-          console.log("Human verification received from Instagram! Solving challenge...");
-          //Initiates the challenge
-          await Bluebird.try(async () => {
-            await ig.challenge.auto(true);
-            console.log(ig.state.challenge);
-          }).catch(IgCheckpointError, async () => {
-            //Call the checkpoint solving team
-            await solveChallenge();
-            /*
-			  		//Temporary workaround
-			  		console.log("\nInstagram wants us to prove that we are human! Unfortunately, this means that you will need to login to this Instagram account manually using a web browser or your mobile phone.");
-			  		console.log("After logging in, solve the challenge and re-run this bot. The bot will now exit.");
-			  		process.exit(0);
-			  		*/
-          });
-        });
-    }
-  });
-}
-
-//Works black magic on the image being uploaded
-async function ocr(myImage) {
-  return new Promise(async function (resolve, reject) {
-    const worker = createWorker({
-      logger: (m) => console.log("[OCR] '" + myImage + "' : ", m["progress"] * 100 + "%"),
-    });
-    await worker.load();
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
-    var {
-      data: { text },
-    } = await worker.recognize(myImage);
-    await worker.terminate();
-    resolve(text);
-  });
-}
-
-//Generates hashtags for the post
-async function autoHashtag(caption, config, myImage) {
-  return new Promise(async function (resolve, reject) {
-    if (config["autohashtags"] != "yes") resolve();
-    else if (config["autohashtags"] == "yes") {
-      if (config["ocr"] == "yes") {
-        var ocrtext = await ocr(myImage);
-      } else {
-        var ocrtext = "";
-      }
-      let hashtags = await generateHashtags(wordpos, caption + " " + ocrtext.toLowerCase());
-      resolve(hashtags);
-    } else {
-      console.log("Your account.json file is broken. Please delete it and rerun the bot.");
-      resolve(hashtags);
-    }
-  });
-}
-
-//Post to instagram
-async function postToInsta(filename, caption) {
-  //Declare some variables
-  var configs = require("./configs/account.json");
-  let path = "./assets/images/approved/" + filename;
-  let hashtags = await autoHashtag(caption.toLowerCase(), configs, "./assets/images/approved/" + filename);
-  let customcaption = await getCustomCaption();
-  let finalCaption = caption + customcaption + "\n\n\n" + hashtags;
-  //Uploads the image to Instagram
-  var upload = await ig.publish
-    .photo({
-      //Reads the file into buffer before uploading
-      file: await Bluebird.fromCallback((cb) => fs.readFile(path, cb)),
-      caption: finalCaption,
-    })
-    .then(function (result) {
-      if (result.status == "ok") {
-        console.log("Uploaded image '" + caption + "' to Instagram.");
-        //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
-        fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, function (err) {
-          if (err) console.log("There was an error while trying to mark the image as uploaded: " + err);
-          else console.log("Image has been marked as uploaded!");
-        });
-      }
-    })
-    .catch(function (err) {
-      console.log("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
-      fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, function (err) {
-        if (err) console.log("There was an error while trying to unapprove the image: " + err);
-        else console.log("The image has been unapproved.");
-      });
-    });
-}
-
 //Chooses an Instagram photo to upload
 async function chooseInstaPhoto() {
   //Choose random image
@@ -474,7 +275,7 @@ async function chooseInstaPhoto() {
     return;
   } else {
     //Change the caption from filesystem format back to human readable format
-    let caption = formatForInsta(post);
+    let caption = restoreSpecialCharacters(post);
     console.log("Uploading post with caption: " + caption);
 
     //Obtain the size of the image
@@ -489,7 +290,7 @@ async function chooseInstaPhoto() {
       //Prevent them from detecting us as a bot
       let aspectRatio = ratio(dimensions.width, dimensions.height);
       if (checkRatio(aspectRatio)) {
-        postToInsta(post, caption);
+        postToInsta(post, caption, ig);
       } else {
         console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
         fs.rename("./assets/images/approved/" + post, "./assets/images/error/" + post, function (err) {
@@ -552,48 +353,12 @@ async function stringSubreddits() {
   });
 }
 
-//Formats caption to submit to ig
-function formatForInsta(dir) {
-  //Remove file extensions from caption and add back special characters
-  let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g, "", "", ""];
-  let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]", ".jpg", ".jpeg", ".png"];
-  for (var i = 0; i < specialCharacters.length; i++) {
-    dir = dir.replace(replacement[i], specialCharacters[i]);
-  }
-
-  return dir;
-}
-
-//Checks if string contains an element in a array
-function contains(target, pattern) {
-  var value = 0;
-  pattern.forEach(function (word) {
-    value = value + target.includes(word);
-  });
-
-  return value === 1;
-}
-
-//Replaces special characters in the filename of files
-async function replaceSpecialChars(postTitle) {
-  return new Promise(function (resolve, reject) {
-    let specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g];
-    let replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]"];
-
-    //Replace special characters into filesystem-compatible ones
-    for (var i = 0; i < specialCharacters.length; i++) {
-      postTitle = postTitle.replace(specialCharacters[i], replacement[i]);
-    }
-    resolve(postTitle);
-  });
-}
-
 //Formats file name to save to Filesystem
 function formatFileName(postTitle, postUrl, nsfw) {
   return new Promise(async function (resolve, reject) {
     let forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i ", "my "];
     //Reformats the filename so that it complies with window's strict filesystem rules
-    postTitle = await replaceSpecialChars(postTitle);
+    postTitle = replaceSpecialChars(postTitle);
 
     let filename;
     //Check if post is NSFW
@@ -644,16 +409,6 @@ async function download(url, postTitle, nsfw) {
   });
 }
 
-//Gets the custom caption set by the user in customcaption.txt
-function getCustomCaption() {
-  return new Promise((resolve, reject) => {
-    //Reads the file
-    fs.readFile("./configs/customcaption.txt", "utf8", async function (err, data) {
-      resolve(data);
-    });
-  });
-}
-
 //Crawls reddit for popular posts to leech on
 async function snoopReddit() {
   //Configure the crawler
@@ -687,20 +442,19 @@ async function instagram() {
   console.log(await setup());
 
   //-- Login to Instagram --//
-  //Load config files
-  var configs = require("./configs/account.json");
-  var customcaption = getCustomCaption();
+  //Load config file
+  const configs = require("./configs/account.json");
 
   //Request for user's Instagram password if they did not store it in account.json
   if (!configs["insta_password"]) {
-    let question = "What is the password associated with '" + configs["insta_username"] + "'? (Required to login) \n";
+    const question = "What is the password associated with '" + configs["insta_username"] + "'? (Required to login) \n";
     var insta_password = await askQuestion(question);
   } else {
     var insta_password = configs["insta_password"];
   }
 
   //Create a new Instagram session
-  await login(configs["insta_username"], insta_password);
+  await login(configs["insta_username"], insta_password, ig);
 
   //Activates reddit crawler
   snoopReddit();

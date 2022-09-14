@@ -1,3 +1,4 @@
+//-- Functions --//
 /**
  * Checks if the aspect ratio of a image can be uploaded to instagram
  * @param {string} aspectRatio The aspect ratio of the image

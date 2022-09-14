@@ -1,96 +1,62 @@
-//-- Import required libraries --//
-const WordPOS = require("wordpos");
-
+//-- Functions --//
 /**
- * Filters and formats nouns as hashtags
- * @param {string[]} nouns The nouns to format and filter
- * @returns Valid nouns as hashtags
+ * Checks if string contains an element in a array
+ * @param {*} string The string to check
+ * @param {*} pattern An array of strings to check for
+ * @returns Whether or not the string contains an element in a array
  */
-async function formatNouns(nouns) {
-  return new Promise((resolve) => {
-    //Loop through all nouns
-    for (let i = 0; i < nouns.length; i++) {
-      //Check if the noun is valid (Remove junk nouns like Aut Abg Oue)
-      if (nouns[i].length < 4) {
-        //The noun is junk
-        nouns.splice(i, 1);
-        i--;
-      } else {
-        //The noun is valid, format it into a hashtag
-        nouns[i] = "#" + nouns[i].toLowerCase();
-      }
+function contains(string, pattern) {
+  //Loops through the string array
+  pattern.forEach((word) => {
+    //Checks if the string contains the current element
+    if (string.includes(word)) {
+      //The string contains the current element
+      return true;
     }
-
-    //Loop over, resolve with the result
-    resolve(nouns);
   });
+
+  //The string does not contain any of the elements in the array
+  return false;
 }
 
 /**
- * Filters and formats adjectives as hashtags
- * @param {string[]} nouns Nouns to filter against
- * @param {string[]} adjective The adjectives to format and filter
- * @returns Valid adjectives as hashtags
+ * Replaces special characters in a string
+ * @param {string} string A string to replace the special characters of
+ * @returns A string without special characters
  */
-async function formatAdjectives(nouns, adjective) {
-  return new Promise((resolve) => {
-    //Loop through all adjectives
-    for (let i = 0; i < adjective.length; i++) {
-      //Check if the adjective is valid (Remove junk adjectives like Aut Abh Oue)
-      if (adjective[i].length < 4) {
-        //The adjective is junk
-        adjective.splice(i, 1);
-        i--;
-      } else {
-        //The adjective is valid, format it into a hashtag
-        adjective[i] = "#" + adjective[i].toLowerCase();
+function replaceSpecialChars(string) {
+  //Define the replacement for each special character
+  const specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g];
+  const replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]"];
 
-        //Check if it is a duplicate of a noun
-        if (nouns.includes(adjective[i])) {
-          //It is a duplicate, remove the adjective
-          adjective.splice(i, 1);
-          i--;
-        }
-      }
-    }
-
-    //Loop over, resolve with the result
-    resolve(adjective);
-  });
+  //Replace special characters into filesystem-compatible ones
+  for (let i = 0; i < specialCharacters.length; i++) {
+    string = string.replace(specialCharacters[i], replacement[i]);
+  }
+  
+  return string;
 }
 
 /**
- * Generate hashtags from a string (Finds nouns and adjectives)
- * @param {string} string A string to generate hashtags off of
- * @returns Generated hashtags
+ * Adds special characters back to a string
+ * @param {string} string A string to restore the special characters back to
+ * @returns A string with its special characters restored
  */
-async function generateHashtags(string) {
-  return new Promise((resolve) => {
-    //Initialise WordPOS
-    const wordpos = new WordPOS();
+function restoreSpecialCharacters(string) {
+  //Remove file extensions from caption and add back special characters
+  const specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g, "", "", ""];
+  const replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]", ".jpg", ".jpeg", ".png"];
 
-    //Find nouns from the string
-    wordpos.getNouns(string, async function (result) {
-      //Filters the nouns and formats the result into hashtags
-      const nouns = await formatNouns(result);
+  //Replace filesystem-compatible characters with the special characters they represent
+  for (let i = 0; i < specialCharacters.length; i++) {
+    string = string.replace(replacement[i], specialCharacters[i]);
+  }
 
-      //Find adjectives from the string
-      wordpos.getAdjectives(string, async function (result) {
-        //Filters the adjectives and formats the result into hashtags
-        const adjective = await formatAdjectives(nouns, result);
-
-        //Join both nouns and adjectives together
-        const hashtags = nouns.join(" ") + " " + adjective.join(" ");
-
-        //Resolves with the result
-        resolve(hashtags);
-      });
-    });
-  });
+  return string;
 }
 
 module.exports = {
-  formatNouns,
-  formatAdjectives,
-  generateHashtags,
+  contains,
+  replaceSpecialChars,
+  restoreSpecialCharacters
 };
