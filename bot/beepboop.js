@@ -1,6 +1,5 @@
 //-- Import required libraries --//
 const { IgApiClient } = require("instagram-private-api");
-const Bluebird = require("bluebird");
 const fs = require("fs");
 const request = require("request");
 const path = require("path");
@@ -12,7 +11,7 @@ const ig = new IgApiClient();
 
 //Import utility functions and libs
 const { checkRatio, contains, replaceSpecialChars, restoreSpecialCharacters } = require("./utils/index");
-const { login, postToInsta } = require("./libs/index");
+const { makeDirs, login, postToInsta } = require("./libs/index");
 
 //Initialize reddit api library
 const Snooper = require("reddit-snooper");
@@ -22,32 +21,6 @@ const snooper = new Snooper({
 });
 
 //-- Functions --//
-//Directory creation
-async function makeDirs() {
-  return new Promise(function (resolve, reject) {
-    //List of needed directories
-    let directories = [
-      "./configs",
-      "./cookies",
-      "./assets",
-      "./assets/images",
-      "./assets/images/approved",
-      "./assets/images/nsfw",
-      "./assets/images/rejected",
-      "./assets/images/uploaded",
-      "./assets/images/error",
-    ];
-    //Create every directory in the array
-    directories.forEach(function (dir) {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir);
-        console.log("Created missing directory:" + dir);
-      }
-    });
-    resolve();
-  });
-}
-
 //First time setup
 async function setup() {
   return new Promise(function (resolve, reject) {
@@ -436,8 +409,28 @@ async function snoopReddit() {
 
 async function instagram() {
   //-- Fail-safe checks --//
+  //List of needed directories
+  const directories = [
+    "./configs",
+    "./cookies",
+    {
+      "./assets": [
+        {
+          "/images": [
+            "/approved",
+            "/nsfw",
+            "/rejected",
+            "/uploaded",
+            "/error",
+          ]
+        },
+      ]
+    },
+  ];
+
   //Create any required directories that do not exist
-  await makeDirs();
+  await makeDirs(directories, "");
+
   //Perform first time setup if required
   console.log(await setup());
 
