@@ -89,13 +89,12 @@ async function solveChallenge(ig) {
 async function login(username, password, ig) {
   return new Promise(async (resolve, reject) => {
     //Load config file
-    const configs = require("../configs/account.json");
+    const configs = require("../configs/config.json");
 
     //Generates a ID for Instagram
     ig.state.generateDevice(username);
 
     //-- Attempt to login via saved cookie --//
-    console.log(findSession())
     //Check if a session cookie exists
     if (findSession()) {
       //A session cookie is saved on the disk, import the saved cookie
@@ -136,18 +135,16 @@ async function login(username, password, ig) {
         // XXX process.nextTick(async() => await ig.simulate.postLoginFlow());
       }).catch(IgLoginBadPasswordError, async () => {
         //The password entered is wrong, so we ask the user for the correct one
-        const retryPassword = await askQuestion(
-          "\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n"
-        );
+        const retryPassword = await askQuestion("\nThe password for the Instagram account '" + username + "'' is incorrect. Please type the correct password.\n");
 
-        //-- Save the correct one to account.json if "Remember me" is enabled --//
+        //-- Save the correct one to config.json if "Remember me" is enabled --//
         //Check if the user enabled "Remember me"
         if (configs["insta_password"]) {
           //"Remember me" is enabled, update the saved password
           configs["insta_password"] = retryPassword;
-          fs.writeFile("./configs/account.json", JSON.stringify(configs), (err) => {
+          fs.writeFile("./configs/config.json", JSON.stringify(configs), (err) => {
             if (err)
-              console.log("There was an error while trying to update account.json with the new password: " + err);
+              console.log("There was an error while trying to update config.json with the new password: " + err);
           });
         }
 

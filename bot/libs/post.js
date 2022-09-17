@@ -3,6 +3,11 @@ const WordPOS = require("wordpos");
 const { createWorker } = require("tesseract.js");
 const Bluebird = require("bluebird");
 const fs = require("fs");
+const sizeOf = require("image-size");
+const ratio = require("aspect-ratio");
+
+//Import utility functions and libs
+const { restoreSpecialCharacters, checkRatio } = require("../utils/index");
 
 //-- Functions --//
 /**
@@ -104,7 +109,7 @@ function ocr(imagePath) {
 function generateHashtags(imagePath, string) {
   return new Promise(async (resolve) => {
     //Load config file
-    const configs = require("../configs/account.json");
+    const configs = require("../configs/config.json").postProcess;
 
     //Checks if the user wants OCR
     let ocrText = "";
@@ -112,6 +117,9 @@ function generateHashtags(imagePath, string) {
       //Perform OCR on the image
       ocrText = await ocr(imagePath);
     }
+
+    //Combine OCR text with string provided
+    string += ` ${ocrText}`;
 
     //Initialise WordPOS
     const wordpos = new WordPOS();
@@ -196,8 +204,65 @@ async function postToInsta(filename, caption, ig) {
   });
 }
 
+/**
+ * Chooses an image to upload to Instagram
+ * @returns Path of the image to upload
+ * @param {Object} ig Instagram client
+ */
+ async function chooseInstaPhoto(ig) {
+  //Retrieves an array of all approved images
+  const files = fs.readdirSync("./assets/images/approved/");
+
+  //Checks if there are any images to upload
+  if (files.length === 0) {
+    //There are no images to upload
+    console.log("No images to upload to instagram!");
+    return;
+  }
+
+  //Chooses a random image
+  const image = files[Math.floor(Math.random() * files.length)];
+
+  //Changes the caption from filesystem format back to human readable format
+  const caption = restoreSpecialCharacters(image);
+  console.log("Uploading post with caption: " + caption);
+
+  //Obtains the size of the image
+  sizeOf("./assets/images/approved/" + image, (err, dimensions) => {
+    if (err) {
+      console.log("Error uploading image to Instagram: " + err);
+      return; //Abort
+    }
+    /**
+     * Check aspect ratio of image before it reaches instagram
+     * Even though there is a catch at the part where it uploads to catch this,
+     * It is a good idea to catch it here first before it reaches their servers to
+     * Prevent them from detecting us as a bot
+     */
+    //Retrieves the aspect ratio of the image
+    const aspectRatio = ratio(dimensions.width, dimensions.height);
+
+    //Checks if the aspect ratio is acceptable
+    if (!checkRatio(aspectRatio)) {
+      //The aspect ratio is unacceptable
+      console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
+      fs.rename("./assets/images/approved/" + image, "./assets/images/error/" + image, (err) => {
+        if (err)
+          console.log("Error encountered while unapproving image: " + err);
+      });
+
+      //Upload another image by repeating the process
+      console.log("Uploading a different image...");
+      chooseInstaPhoto(ig);
+      return;
+    }
+
+    //The aspect ratio is acceptable, upload the image
+    postToInsta(image, caption, ig);
+    return;
+  });
+}
+
 module.exports = {
-  formatNouns,
-  formatAdjectives,
-  postToInsta
+  chooseInstaPhoto
 };

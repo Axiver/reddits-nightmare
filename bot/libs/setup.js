@@ -11,9 +11,6 @@ const readline = require("readline");
  */
 function askQuestion(question, rl) {
   return new Promise((resolve, reject) => {
-    //Initialise the result
-    let result;
-
     //Check if a readline instance was provided
     if (rl != null) {
       //A readline instance was provided, resume the instance
@@ -24,8 +21,8 @@ function askQuestion(question, rl) {
         //Pause the readline instance
         rl.pause();
 
-        //Save the answer
-        result = answer;
+        //Resolve with the result
+        resolve(answer);
       });
     } else {
       //No readline instance was provided
@@ -40,13 +37,10 @@ function askQuestion(question, rl) {
         //Unhook readline
         rl.close();
 
-        //Save the answer
-        result = answer;
+        //Resolve with the result
+        resolve(answer);
       });
     }
-
-    //Resolve with the result
-    resolve(result);
   });
 }
 
@@ -141,8 +135,8 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
 
     //Checks if the subreddits file exists
     if (!fs.existsSync("./configs/subreddits.txt")) {
-      //It does not exist, create the subreddit config file
-      fs.writeFile("./configs/subreddits.txt", subreddits, (err) => {
+      //It does not exist, string the subreddits together and create the subreddit config file
+      fs.writeFile("./configs/subreddits.txt", subreddits.join(), (err) => {
         if (err) {
           console.log("Encountered an error creating './configs/subreddits.txt'! Error: " + err);
           process.exit(1);
@@ -168,76 +162,13 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
     //Wait a second for everything to be created. There's gotta be a better way to do this, I'll figure it out in the future.
     setTimeout(() => {
       //Check if all the config files are present. If so, return true.
-      if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/account.json") && fs.existsSync("./configs/subreddits.txt")) {
+      if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/config.json") && fs.existsSync("./configs/subreddits.txt")) {
         resolve(true);
       } else {
         console.log("There was a problem creating the config files. The bot will now exit.");
         process.exit(1);
       }
     }, 1000);
-  });
-}
-
-/**
- * First time setup
- */
-function setup() {
-  return new Promise(async (resolve, reject) => {
-    //Check if account credential file exists
-    if (!fs.existsSync("./configs/config.json")) {
-      //If no, perform first time setup
-      console.log("Performing first time setup");
-
-      //Hook to console
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      //Asks if the user wants automatic setup
-      const answer = await askQuestion("Would you like to automatically configure the config file? (You will have to do this manually if you answer no) [y/n] \n", rl).toLowerCase();
-
-      //Checks for a valid response
-      if (answer !== "y" && answer !== "yes") {
-        //User does not want automatic configuration
-        console.log("Okay, but you need to perform manual setup or the bot will refuse to start.");
-        console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare/wiki for more information.");
-
-        //End readline and exit nodejs
-        rl.close();
-        process.exit(0);
-      }
-
-      //User wants automatic configuration
-      //Request for user's Instagram login details
-      const logindetails = await setupInstagram(rl);
-
-      //Configures the reddit snooper
-      const snooperConfig = await setupSnooper(rl);
-
-      //Check if the subreddits file exists
-      let subreddits = undefined;
-      if (!fs.existsSync("./configs/subreddits.txt")) {
-        //The subreddit file does not exist, create it
-        subreddits = await setupSubreddits(rl);
-      }
-
-      //Request for post-processing configuration
-      const postProcessConfig = await setupPostProcessing(rl);
-
-      //Creates remaining configuration files
-      if (!await createConfigs(subreddits, logindetails, postProcessConfig, snooperConfig)) {
-        //An error has occurred
-        reject("An unknown error has occurred while performing automatic setup.");
-      }
-
-      //Setup complete, end readline
-      rl.close();
-      resolve("Setup complete. Booting!");
-    } else {
-      //No setup is required, all prerequisites are present
-      resolve("Prerequisites present, booting!");
-    }
   });
 }
 
@@ -253,7 +184,8 @@ function setupSnooper(rl) {
 
     //-- Configures post sorting order --//
     //Asks the user which sorting method they'd prefer
-    const sortingMethod = await askQuestion("\nHow would you like the bot to sort? (Defaults to hot) [hot/top_24/top_day/controversial/rising] \n", rl).toLowerCase();
+    const answer = await askQuestion("\nHow would you like the bot to sort? (Defaults to hot) [hot/top_24/top_day/controversial/rising] \n", rl);
+    const sortingMethod = answer.toLowerCase();
 
     //Checks for and saves a valid response
     switch (sortingMethod) {
@@ -312,10 +244,11 @@ function setupInstagram(rl) {
     settings["insta_username"] = username;
 
     //Asks the user for whether or not they'd like the "Remember me" feature
-    const rememberMe = await askQuestion('\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. (It is not recommended to enable this as you only need to type in your password once every now and then anyways, due to the usage of sessions)\n', rl).toLowerCase();
+    const answer = await askQuestion('\nWould you like to enable "Remember me"? (This stores your Instagram password as plaintext on your local machine, resulting in weaker security. (It is not recommended to enable this as you only need to type in your password once every now and then anyways, due to the usage of sessions)\n', rl);
+    const rememberMe = answer.toLowerCase();
     
     //Checks for a valid response
-    if (rememberMe != "y" || rememberMe != "yes") {
+    if (rememberMe != "y" && rememberMe != "yes") {
       //User does not want the "Remember Me" feature
       //Resolve and return early
       resolve(settings);
@@ -347,7 +280,7 @@ function setupSubreddits(rl) {
 
     //Formats the response
     //Checks if the user has any "r/"s
-    if (answer.includes("r/")) {
+    if (subreddits.includes("r/")) {
       //Removes any "r/" from the input
       subreddits = subreddits.replace(/r\//g, "");
     }
@@ -375,7 +308,8 @@ function setupPostProcessing(rl) {
 
     //-- Configures automatic hashtags --//
     //Asks the user whether or not they'd like for hashtags to be generated automatically
-    const autoHashtags = await askQuestion("\nWould you like the bot to automatically generate hashtags for you? [y/cancel] \n", rl).toLowerCase();
+    let answer = await askQuestion("\nWould you like the bot to automatically generate hashtags for you? [y/cancel] \n", rl);
+    const autoHashtags = answer.toLowerCase();
 
     //Checks for and saves a valid response
     if (autoHashtags == "y" || autoHashtags == "yes") {
@@ -386,7 +320,8 @@ function setupPostProcessing(rl) {
 
     //-- Configures OCR --//
     //Asks the user if they'd like for OCR to be enabled
-    const enableOCR = await askQuestion("\nWould you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n", rl).toLowerCase();
+    answer = await askQuestion("\nWould you like OCR to be enabled? (Scans images for text and uses them as hashtags) [y/cancel] \n", rl);
+    const enableOCR = answer.toLowerCase();
 
     //Checks for and saves a valid response
     if (enableOCR == "y" || enableOCR == "yes") {
@@ -400,7 +335,72 @@ function setupPostProcessing(rl) {
   });
 }
 
+/**
+ * Performs first time setup
+ */
+ function setup() {
+  return new Promise(async (resolve, reject) => {
+    //Check if account credential file exists
+    if (!fs.existsSync("./configs/config.json")) {
+      //If no, perform first time setup
+      console.log("Performing first time setup");
+
+      //Hook to console
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      //Asks if the user wants automatic setup
+      const response = await askQuestion("Would you like to automatically configure the config file? (You will have to do this manually if you answer no) [y/n] \n", rl);
+      const answer = response.toLowerCase();
+
+      //Checks for a valid response
+      if (answer !== "y" && answer !== "yes") {
+        //User does not want automatic configuration
+        console.log("Okay, but you need to perform manual setup or the bot will refuse to start.");
+        console.log("Read the documentation at https://github.com/Garlicvideos/reddits-nightmare/wiki for more information.");
+
+        //End readline and exit nodejs
+        rl.close();
+        process.exit(0);
+      }
+
+      //User wants automatic configuration
+      //Request for user's Instagram login details
+      const logindetails = await setupInstagram(rl);
+
+      //Configures the reddit snooper
+      const snooperConfig = await setupSnooper(rl);
+
+      //Check if the subreddits file exists
+      let subreddits = undefined;
+      if (!fs.existsSync("./configs/subreddits.txt")) {
+        //The subreddit file does not exist, create it
+        subreddits = await setupSubreddits(rl);
+      }
+
+      //Request for post-processing configuration
+      const postProcessConfig = await setupPostProcessing(rl);
+
+      //Creates remaining configuration files
+      if (!await createConfigs(subreddits, logindetails, postProcessConfig, snooperConfig)) {
+        //An error has occurred
+        reject("An unknown error has occurred while performing automatic setup.");
+      }
+
+      //Setup complete, end readline
+      rl.close();
+      resolve("Setup complete. Booting!");
+    } else {
+      //No setup is required, all prerequisites are present
+      resolve("Prerequisites present, booting!");
+    }
+  });
+}
+
 module.exports = {
+  askQuestion,
   makeDirs,
   setup
 };
