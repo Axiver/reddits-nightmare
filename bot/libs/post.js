@@ -5,6 +5,8 @@ const Bluebird = require("bluebird");
 const fs = require("fs");
 const sizeOf = require("image-size");
 const ratio = require("aspect-ratio");
+const cliProgress = require('cli-progress');
+const path = require("path");
 
 //Import utility functions and libs
 const { restoreSpecialCharacters, checkRatio } = require("../utils/index");
@@ -75,9 +77,25 @@ function formatAdjectives(nouns, adjective) {
  */
 function ocr(imagePath) {
   return new Promise(async (resolve, reject) => {
+    //-- Creates a new progress bar in CLI --//
+    //Creates the bar
+    const progressBar = new cliProgress.SingleBar({
+      format: `[OCR] Processing ${path.basename(imagePath)} |{bar}| {percentage}%`,
+      barCompleteChar: '\u2588',
+      barIncompleteChar: '\u2591',
+      hideCursor: true
+    });
+
+    //Initialises the bar
+    progressBar.start(100, 0, {
+      speed: "N/A"
+    });
+    
     //-- Creates and configures OCR worker --//
     const worker = createWorker({
-      logger: (m) => console.log("[OCR] '" + imagePath + "' : ", m["progress"] * 100 + "%"),
+      logger: (m) => { 
+        progressBar.update(m.progress * 100);
+      },
     });
 
     //Load the worker and sets its language to english
@@ -94,6 +112,9 @@ function ocr(imagePath) {
 
     //Terminate the OCR worker
     await worker.terminate();
+
+    //Stop the bar
+    progressBar.stop();
 
     //Resolve with the result
     resolve(text);

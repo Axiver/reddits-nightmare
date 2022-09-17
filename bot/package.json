@@ -24,6 +24,7 @@
   "homepage": "https://github.com/Garlicvideos/reddits-nightmare#readme",
   "dependencies": {
     "aspect-ratio": "^2.1.1",
+    "cli-progress": "^3.11.2",
     "fs": "0.0.1-security",
     "image-size": "^0.8.3",
     "instagram-private-api": "^1.45.3",
