@@ -78,12 +78,17 @@ function formatAdjectives(nouns, adjective) {
 function ocr(imagePath) {
   return new Promise(async (resolve, reject) => {
     //-- Creates a new progress bar in CLI --//
+    //Derives the name of the file to be processed
+    const fileName = path.basename(imagePath);
+
     //Creates the bar
     const progressBar = new cliProgress.SingleBar({
-      format: `[OCR] Processing ${path.basename(imagePath)} |{bar}| {percentage}%`,
+      format: `[OCR] Processing '${fileName}' |{bar}| {percentage}%`,
       barCompleteChar: '\u2588',
       barIncompleteChar: '\u2591',
-      hideCursor: true
+      hideCursor: true,
+      clearOnComplete: true,
+      linewrap: true
     });
 
     //Initialises the bar
@@ -115,6 +120,9 @@ function ocr(imagePath) {
 
     //Stop the bar
     progressBar.stop();
+
+    //Print OCR complete log
+    console.log(`[OCR] Processed '${fileName}'`);
 
     //Resolve with the result
     resolve(text);

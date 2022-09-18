@@ -44,7 +44,7 @@ function replaceSpecialChars(string) {
  */
 function restoreSpecialCharacters(string) {
   //Remove file extensions from caption and add back special characters
-  const specialCharacters = [/\?/g, /\//g, /\</g, /\>/g, /\"/g, /\*/g, /\\/g, /\:/g, "", "", ""];
+  const specialCharacters = ["?", "/", "<", ">", "\"", "*", "\\", ":", "", "", ""];
   const replacement = ["[q]", "[s]", "[l]", "[m]", "[quo]", "[st]", "[bs]", "[col]", ".jpg", ".jpeg", ".png"];
 
   //Replace filesystem-compatible characters with the special characters they represent
