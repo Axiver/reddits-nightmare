@@ -131,7 +131,7 @@ async function download(url, postTitle, nsfw) {
 
       //Creates a progress bar
       const progressBar = new cliProgress.SingleBar({
-        format: `[Reddit Snooper] Downloading '${postTitle}' |{bar}| {percentage}% | {value}/{total} Chunks | Speed: {speed}`,
+        format: `Downloading '${postTitle}' |{bar}| {percentage}% | {value}/{total} Chunks | Speed: {speed}`,
         barCompleteChar: '\u2588',
         barIncompleteChar: '\u2591',
         hideCursor: true,
@@ -165,7 +165,7 @@ async function download(url, postTitle, nsfw) {
 
             //Stop the progress bar
             progressBar.stop();
-            console.log("[Reddit Snooper] Downloaded: " + postTitle);
+            console.log("Downloaded: " + postTitle);
           });
       });
     }
@@ -183,6 +183,7 @@ async function snoopReddit() {
   let options = {
     listing: configs.sort, // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: configs.top, // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
+
   };
 
   //Reformat the subreddit list

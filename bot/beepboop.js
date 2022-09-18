@@ -60,7 +60,7 @@ async function start() {
   //You may change the upload frequency if you wish. (The number below is in milliseconds)
   setInterval(() => { chooseInstaPhoto(ig) }, 1.5e6);
 
-  //chooseInstaPhoto(ig);
+  chooseInstaPhoto(ig);
 }
 
 //Activates the bot
