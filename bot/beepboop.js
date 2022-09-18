@@ -54,7 +54,7 @@ async function start() {
   await login(configs["insta_username"], insta_password, ig);
 
   //Activates reddit crawler
-  //snoopReddit();
+  snoopReddit();
 
   //-- Upload every (25) minutes --//
   //You may change the upload frequency if you wish. (The number below is in milliseconds)

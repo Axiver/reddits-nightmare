@@ -68,12 +68,11 @@ function formatAdjectives(nouns, adjective) {
 
 /**
  * Generate hashtags from a string (Finds nouns and adjectives)
- * @param {object} image The image to generate hashtags for
  * @param {string} imagePath The path to the image
  * @param {string} string A string to generate hashtags off of
  * @returns Generated hashtags
  */
-function generateHashtags(image, imagePath, string) {
+function generateHashtags(imagePath, string) {
   return new Promise(async (resolve) => {
     //Load config file
     const configs = require("../configs/config.json").postProcess;
@@ -82,7 +81,7 @@ function generateHashtags(image, imagePath, string) {
     let ocrText = "";
     if (configs["ocr"] == "yes") {
       //Perform OCR on the image
-      ocrText = await ocr(image, imagePath);
+      ocrText = await ocr(imagePath);
     }
 
     //Combine OCR text with string provided
@@ -137,7 +136,7 @@ async function postToInsta(image, filename, caption, ig) {
   const imagePath = "./assets/images/approved/" + filename;
 
   //Derive image caption
-  const hashtags = await generateHashtags(image, imagePath, caption.toLowerCase());
+  const hashtags = await generateHashtags(imagePath, caption.toLowerCase());
   const customcaption = await getCustomCaption();
   const finalCaption = caption + customcaption + "\n\n\n" + hashtags;
 

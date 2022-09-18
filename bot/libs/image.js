@@ -66,11 +66,10 @@ function formatFileName(postTitle, postUrl, nsfw) {
 
 /**
  * Uses OCR to obtain words from the image
- * @param {object} image The image to perform OCR on
  * @param {string} imagePath The path to the image
  * @returns OCR result
  */
- function ocr(image, imagePath) {
+ function ocr(imagePath) {
   return new Promise(async (resolve, reject) => {
     //-- Creates a new progress bar in CLI --//
     //Derives the name of the file to be processed
@@ -111,7 +110,7 @@ function formatFileName(postTitle, postUrl, nsfw) {
       data: { 
         text
       },
-    } = await worker.recognize(image);
+    } = await worker.recognize(imagePath);
 
     //Terminate the OCR worker
     await worker.terminate();
