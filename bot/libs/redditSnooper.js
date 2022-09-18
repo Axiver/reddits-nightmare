@@ -1,6 +1,7 @@
 //-- Import required libraries --//
 const fs = require("fs");
 const request = require("request");
+const cliProgress = require('cli-progress');
 
 //Initialize reddit api library
 const Snooper = require("reddit-snooper");
@@ -124,14 +125,47 @@ async function download(url, postTitle, nsfw) {
   request.head(url, (err, res, body) => {
     //If the file already exists, it means that it was downloaded before, thus it will not download again.
     if (!fs.existsSync(filepath)) {
-      //The file has never been downloaded before, download it
+      //-- The file has never been downloaded before, download it --//
+      //Open a write stream to the target path
       const filetoPipe = fs.createWriteStream(filepath);
+
+      //Creates a progress bar
+      const progressBar = new cliProgress.SingleBar({
+        format: `[Reddit Snooper] Downloading '${postTitle}' |{bar}| {percentage}% | {value}/{total} Chunks | Speed: {speed}`,
+        barCompleteChar: '\u2588',
+        barIncompleteChar: '\u2591',
+        hideCursor: true,
+        clearOnComplete: true,
+        linewrap: true
+      });
+
+      //Initialises the bar
+      progressBar.start(100, 0, {
+        speed: "N/A"
+      });
+
+      //Download the image and pipe it to the file
       filetoPipe.on("open", () => {
         request(url)
           .pipe(filetoPipe)
+          .on('response', (data) => {
+            //Retrieve the total number of chunks of the payload
+            const totalChunks = parseInt(data.headers['content-length']);
+
+            //Start the progress bar
+            progressBar.start(totalChunks);
+          })
+          .on("data", (chunk) => {
+            //Update the progress bar on every chunk received
+            progressBar.increment(chunk.length);
+          })
           .on("close", () => {
+            //Download complete, close pipe
             filetoPipe.end();
-            console.log("Downloaded: " + postTitle);
+
+            //Stop the progress bar
+            progressBar.stop();
+            console.log("[Reddit Snooper] Downloaded: " + postTitle);
           });
       });
     }
