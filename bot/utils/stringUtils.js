@@ -55,8 +55,18 @@ function restoreSpecialCharacters(string) {
   return string;
 }
 
+/**
+ * Capitalizes the first letter of a string
+ * @param {string} string The string to format
+ * @returns The formatted string
+ */
+function capitalizeFirstLetter(string) {
+  return string[0].toUpperCase() + string.slice(1);
+}
+
 module.exports = {
   contains,
   replaceSpecialChars,
-  restoreSpecialCharacters
+  restoreSpecialCharacters,
+  capitalizeFirstLetter
 };

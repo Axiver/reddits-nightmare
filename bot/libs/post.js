@@ -1,15 +1,11 @@
 //-- Import required libraries --//
 const WordPOS = require("wordpos");
-const { createWorker } = require("tesseract.js");
-const Bluebird = require("bluebird");
 const fs = require("fs");
 const sizeOf = require("image-size");
-const ratio = require("aspect-ratio");
-const cliProgress = require('cli-progress');
-const path = require("path");
 
 //Import utility functions and libs
-const { restoreSpecialCharacters, checkRatio } = require("../utils/index");
+const { parseImage, ocr } = require("../libs/image");
+const { restoreSpecialCharacters } = require("../utils/index");
 
 //-- Functions --//
 /**
@@ -71,71 +67,13 @@ function formatAdjectives(nouns, adjective) {
 }
 
 /**
- * Uses OCR to obtain words from the image
- * @param {string} imagePath The path to the image to generate hashtags for
- * @returns OCR result
- */
-function ocr(imagePath) {
-  return new Promise(async (resolve, reject) => {
-    //-- Creates a new progress bar in CLI --//
-    //Derives the name of the file to be processed
-    const fileName = path.basename(imagePath);
-
-    //Creates the bar
-    const progressBar = new cliProgress.SingleBar({
-      format: `[OCR] Processing '${fileName}' |{bar}| {percentage}%`,
-      barCompleteChar: '\u2588',
-      barIncompleteChar: '\u2591',
-      hideCursor: true,
-      clearOnComplete: true,
-      linewrap: true
-    });
-
-    //Initialises the bar
-    progressBar.start(100, 0, {
-      speed: "N/A"
-    });
-    
-    //-- Creates and configures OCR worker --//
-    const worker = createWorker({
-      logger: (m) => { 
-        progressBar.update(m.progress * 100);
-      },
-    });
-
-    //Load the worker and sets its language to english
-    await worker.load();
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
-
-    //Perform OCR on the image
-    const {
-      data: { 
-        text
-      },
-    } = await worker.recognize(imagePath);
-
-    //Terminate the OCR worker
-    await worker.terminate();
-
-    //Stop the bar
-    progressBar.stop();
-
-    //Print OCR complete log
-    console.log(`[OCR] Processed '${fileName}'`);
-
-    //Resolve with the result
-    resolve(text);
-  });
-}
-
-/**
  * Generate hashtags from a string (Finds nouns and adjectives)
- * @param {string} imagePath The path to the image to generate hashtags for
+ * @param {object} image The image to generate hashtags for
+ * @param {string} imagePath The path to the image
  * @param {string} string A string to generate hashtags off of
  * @returns Generated hashtags
  */
-function generateHashtags(imagePath, string) {
+function generateHashtags(image, imagePath, string) {
   return new Promise(async (resolve) => {
     //Load config file
     const configs = require("../configs/config.json").postProcess;
@@ -144,7 +82,7 @@ function generateHashtags(imagePath, string) {
     let ocrText = "";
     if (configs["ocr"] == "yes") {
       //Perform OCR on the image
-      ocrText = await ocr(imagePath);
+      ocrText = await ocr(image, imagePath);
     }
 
     //Combine OCR text with string provided
@@ -189,23 +127,24 @@ function getCustomCaption() {
 
 /**
  * Post to instagram
+ * @param {object} image The image to upload 
  * @param {string} filename The name of the image file 
  * @param {string} caption The image caption
  * @param {Object} ig Instagram client
  */
-async function postToInsta(filename, caption, ig) {
+async function postToInsta(image, filename, caption, ig) {
   //Declares the path of the image
   const imagePath = "./assets/images/approved/" + filename;
 
   //Derive image caption
-  const hashtags = await generateHashtags(imagePath, caption.toLowerCase());
+  const hashtags = await generateHashtags(image, imagePath, caption.toLowerCase());
   const customcaption = await getCustomCaption();
   const finalCaption = caption + customcaption + "\n\n\n" + hashtags;
 
   //Uploads the image to Instagram
   await ig.publish.photo({
     //Reads the file into buffer before uploading
-    file: await Bluebird.fromCallback((cb) => fs.readFile(imagePath, cb)),
+    file: image,
     caption: finalCaption,
   }).then((result) => {
     //Checks if the image upload was successful
@@ -214,7 +153,7 @@ async function postToInsta(filename, caption, ig) {
       console.log("Uploaded image '" + caption + "' to Instagram.");
 
       //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
-      fs.rename("./assets/images/approved/" + filename, "./assets/images/uploaded/" + filename, (err) => {
+      fs.rename(imagePath, "./assets/images/uploaded/" + filename, (err) => {
         if (err)
           console.log("There was an error while trying to mark the image as uploaded: " + err);
         else
@@ -224,7 +163,7 @@ async function postToInsta(filename, caption, ig) {
   }).catch((err) => {
     //An error occurred
     console.log("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
-    fs.rename("./assets/images/approved/" + filename, "./assets/images/error/" + filename, (err) => {
+    fs.rename(imagePath, "./assets/images/error/" + filename, (err) => {
       if (err)
         console.log("There was an error while trying to unapprove the image: " + err);
       else
@@ -250,32 +189,27 @@ async function postToInsta(filename, caption, ig) {
   }
 
   //Chooses a random image
-  const image = files[Math.floor(Math.random() * files.length)];
+  const fileName = files[Math.floor(Math.random() * files.length)];
 
   //Changes the caption from filesystem format back to human readable format
-  const caption = restoreSpecialCharacters(image);
+  const caption = restoreSpecialCharacters(fileName);
   console.log("Uploading post with caption: " + caption);
 
   //Obtains the size of the image
-  sizeOf("./assets/images/approved/" + image, (err, dimensions) => {
+  sizeOf("./assets/images/approved/" + fileName, async (err, dimensions) => {
     if (err) {
       console.log("Error uploading image to Instagram: " + err);
       return; //Abort
     }
-    /**
-     * Check aspect ratio of image before it reaches instagram
-     * Even though there is a catch at the part where it uploads to catch this,
-     * It is a good idea to catch it here first before it reaches their servers to
-     * Prevent them from detecting us as a bot
-     */
-    //Retrieves the aspect ratio of the image
-    const aspectRatio = ratio(dimensions.width, dimensions.height);
+    
+    //Parses the image such that it will fit instagram's allowed aspect ratio
+    const parsedImage = await parseImage(fileName, [dimensions.width, dimensions.height]);
 
-    //Checks if the aspect ratio is acceptable
-    if (!checkRatio(aspectRatio)) {
+    //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
+    if (!parsedImage) {
       //The aspect ratio is unacceptable
       console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
-      fs.rename("./assets/images/approved/" + image, "./assets/images/error/" + image, (err) => {
+      fs.rename("./assets/images/approved/" + fileName, "./assets/images/error/" + fileName, (err) => {
         if (err)
           console.log("Error encountered while unapproving image: " + err);
       });
@@ -287,7 +221,7 @@ async function postToInsta(filename, caption, ig) {
     }
 
     //The aspect ratio is acceptable, upload the image
-    postToInsta(image, caption, ig);
+    postToInsta(parsedImage, fileName, caption, ig);
     return;
   });
 }
