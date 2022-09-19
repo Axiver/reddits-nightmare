@@ -1,7 +1,6 @@
 //-- Import required libraries --//
 const WordPOS = require("wordpos");
 const fs = require("fs");
-const sizeOf = require("image-size");
 
 //Import utility functions and libs
 const { parseImage, ocr } = require("../libs/image");
@@ -189,40 +188,33 @@ async function postToInsta(image, filename, caption, ig) {
 
   //Chooses a random image
   const fileName = files[Math.floor(Math.random() * files.length)];
+  const filePath = "./assets/images/approved/" + fileName;
 
   //Changes the caption from filesystem format back to human readable format
   const caption = restoreSpecialCharacters(fileName);
   console.log("Uploading post with caption: " + caption);
 
-  //Obtains the size of the image
-  sizeOf("./assets/images/approved/" + fileName, async (err, dimensions) => {
-    if (err) {
-      console.log("Error uploading image to Instagram: " + err);
-      return; //Abort
-    }
-    
-    //Parses the image such that it will fit instagram's allowed aspect ratio
-    const parsedImage = await parseImage(fileName, [dimensions.width, dimensions.height]);
+  //Parses the image such that it will fit instagram's allowed aspect ratio
+  const parsedImage = await parseImage(filePath);
 
-    //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
-    if (!parsedImage) {
-      //The aspect ratio is unacceptable
-      console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
-      fs.rename("./assets/images/approved/" + fileName, "./assets/images/error/" + fileName, (err) => {
-        if (err)
-          console.log("Error encountered while unapproving image: " + err);
-      });
+  //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
+  if (!parsedImage) {
+    //The aspect ratio is unacceptable
+    console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
+    fs.rename(filePath, "./assets/images/error/" + fileName, (err) => {
+      if (err)
+        console.log("Error encountered while unapproving image: " + err);
+    });
 
-      //Upload another image by repeating the process
-      console.log("Uploading a different image...");
-      chooseInstaPhoto(ig);
-      return;
-    }
-
-    //The aspect ratio is acceptable, upload the image
-    postToInsta(parsedImage, fileName, caption, ig);
+    //Upload another image by repeating the process
+    console.log("Uploading a different image...");
+    chooseInstaPhoto(ig);
     return;
-  });
+  }
+
+  //The aspect ratio is acceptable, upload the image
+  postToInsta(parsedImage, fileName, caption, ig);
+  return;
 }
 
 module.exports = {

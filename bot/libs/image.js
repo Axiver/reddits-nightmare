@@ -131,57 +131,76 @@ function formatFileName(postTitle, postUrl, nsfw) {
  * Even though there is a catch at the part where it uploads to catch rejected aspect ratios,
  * It is a good idea to catch it here first before it reaches their servers to
  * Prevent them from detecting us as a bot
- * @param {string} imagePath The path to the image being checked
- * @param {string} aspectRatio The aspect ratio of the image
+ * @param {string} imagePath Path to the image being checked
  * @returns Whether or not the ratio of the image is acceptable
  */
- async function parseImage(imagePath, aspectRatio) {
-  //Obtains the width and the height of the image
-  const [width, height] = aspectRatio;
-
-  //-- Check if the height and width of the image are within the allowed aspect ratios --//
-  //Define allowed aspect ratios
-  //Allowed aspect ratios are obtained from https://help.instagram.com/1631821640426723
-  const allowedRatios = {
-    width: {
-      lowerLimit: 320,
-      upperLimit: 1080
-    },
-    height: {
-      lowerLimit: 566,
-      upperLimit: 1350
+function parseImage(imagePath) {
+  return new Promise(async (resolve, reject) => {
+    //-- Auto scales and crops images that do not fit the allowed aspect ratios --//
+    //Define allowed aspect ratios
+    //Allowed aspect ratios are obtained from https://help.instagram.com/1631821640426723
+    const allowedRatios = {
+      width: {
+        lowerLimit: 320,
+        upperLimit: 1080
+      },
+      height: {
+        lowerLimit: 566,
+        upperLimit: 1350
+      }
     }
-  }
 
-  //Check if the image fits the allowed width
-  if (width < allowedRatios.width.lowerLimit || width > allowedRatios.width.upperLimit) {
-    //-- Image does not meet the allowed width, attempt to resize it --//
-    //Check if the image is closer to the lower limit
-    if (allowedRatios.width.lowerLimit - width >= width - allowedRatios.width.upperLimit) {
-      //The image is closer to the lower limit, calculate the height to resize to
-      const newHeight = Math.floor((allowedRatios.width.lowerLimit / width) * height);
-      const parsedImage = sharp("./assets/images/approved/" + imagePath)
-        .resize(allowedRatios.width.lowerLimit, newHeight)
-        .toBuffer();
-      return parsedImage;
-    } else {
-      //The image is closer to the upper limit, calculate the height to resize to
-      const newHeight = Math.floor(height / (width / allowedRatios.width.upperLimit));
-      const parsedImage = sharp("./assets/images/approved/" + imagePath)
-        .resize(allowedRatios.width.upperLimit, newHeight)
-        .toBuffer();
-      return parsedImage;
+    //Read the image to buffer (Also obtains image metadata)
+    let image = await sharp(imagePath).rotate().toBuffer({resolveWithObject: true});
+
+    /**
+     * Resizes/crops image based on width
+     */
+    //Check if the image fits the allowed width
+    if (image.info.width < allowedRatios.width.lowerLimit || image.info.width > allowedRatios.width.upperLimit) {
+      //-- Image does not meet the allowed width, attempt to resize it --//
+      //Check if the image is closer to the lower limit
+      if (allowedRatios.width.lowerLimit - image.info.width >= image.info.width - allowedRatios.width.upperLimit) {
+        //The image is closer to the lower limit, calculate the height to resize to
+        const newHeight = Math.floor((allowedRatios.width.lowerLimit / image.info.width) * image.info.height);
+
+        //Resize the image
+        image = await sharp(image.data).resize(allowedRatios.width.lowerLimit, newHeight).toBuffer({resolveWithObject: true});
+      } else {
+        //The image is closer to the upper limit, calculate the height to resize to
+        const newHeight = Math.floor(image.info.height / (image.info.width / allowedRatios.width.upperLimit));
+ 
+        //Resize the image
+        image = await sharp(image.data).resize(allowedRatios.width.upperLimit, newHeight).toBuffer({resolveWithObject: true});
+      }
     }
-  }
 
-  //Check if the image fits the allowed height
-  if (height < allowedRatios.height.lowerLimit || height > allowedRatios.height.upperLimit) {
-    //Image does not meet the allowed height
-    return false;
-  }
+    /**
+     * Resizes/crops image based on height
+     */
+    //Check if the image fits the allowed height
+    if (image.info.height < allowedRatios.height.lowerLimit || image.info.height > allowedRatios.height.upperLimit) {
+      //-- Image does not meet the allowed height, attempt to trim it --//
+      //Check if the image is closer to the lower limit
+      if (allowedRatios.height.lowerLimit - image.info.height >= image.info.height - allowedRatios.height.upperLimit) {
+        //The image is closer to the lower limit, calculate the width to resize to
+        const newWidth = Math.floor((allowedRatios.height.lowerLimit / image.info.height) * image.info.width);
 
-  //The aspect ratio is allowed and does not need any resizing
-  return true;
+        //Crop the image (Vertically and horizontally anchored)
+        image = await sharp(image.data).extract(newWidth, allowedRatios.height.lowerLimit).toBuffer();
+      } else {
+        //-- The image is closer to the upper limit, crop the image --//
+        //Calculate the amount of height that needs to be cropped out of the image
+        const excessHeight = image.info.height - allowedRatios.height.upperLimit;
+
+        //Crop the image (Vertically and horizontally anchored)
+        image = await sharp(image.data).extract({ left: 0, top: Math.floor(excessHeight / 2), width: image.info.width, height: allowedRatios.height.upperLimit }).toBuffer();
+      }
+    }
+
+    //The image has been parsed
+    resolve(image);
+  });
 }
 
 module.exports = {
