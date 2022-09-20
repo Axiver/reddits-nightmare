@@ -187,19 +187,19 @@ function parseImage(imagePath) {
         const newWidth = Math.floor((allowedRatios.height.lowerLimit / image.info.height) * image.info.width);
 
         //Crop the image (Vertically and horizontally anchored)
-        image = await sharp(image.data).extract(newWidth, allowedRatios.height.lowerLimit).toBuffer();
+        image = await sharp(image.data).resize(newWidth, allowedRatios.height.lowerLimit).toBuffer({resolveWithObject: true});
       } else {
         //-- The image is closer to the upper limit, crop the image --//
         //Calculate the amount of height that needs to be cropped out of the image
         const excessHeight = image.info.height - allowedRatios.height.upperLimit;
 
         //Crop the image (Vertically and horizontally anchored)
-        image = await sharp(image.data).extract({ left: 0, top: Math.floor(excessHeight / 2), width: image.info.width, height: allowedRatios.height.upperLimit }).toBuffer();
+        image = await sharp(image.data).extract({ left: 0, top: Math.floor(excessHeight / 2), width: image.info.width, height: allowedRatios.height.upperLimit }).toBuffer({resolveWithObject: true});
       }
     }
 
     //The image has been parsed
-    resolve(image);
+    resolve(image.data);
   });
 }
 
