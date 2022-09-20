@@ -170,6 +170,10 @@ async function download(url, postTitle, nsfw) {
             progressBar.stop();
             logger.info(`Downloaded '${postTitle}'`);
           });
+      }).on('error', (err) => {
+        //Stop the progress bar
+        progressBar.stop();
+        logger.error(`Unable to download '${postTitle}': `, err);
       });
     }
   });
