@@ -1,6 +1,7 @@
 //-- Import required libraries --//
 const fs = require("fs");
 const readline = require("readline");
+const logger = require("./logger")("Setup");
 
 //-- Functions --//
 /**
@@ -60,7 +61,7 @@ function askQuestion(question, rl) {
       if (!fs.existsSync(parentDir + dirs)) {
         //The directory does not exist, create it
         fs.mkdirSync(parentDir + dirs);
-        console.log("Created missing directory:" + parentDir + dirs);
+        logger.info("Created missing directory:" + parentDir + dirs);
 
         resolve();
         return;
@@ -126,9 +127,9 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
       //Checks for any errors
       if (!err) {
         //File creation successful
-        console.log("Created config.json containing configurations");
+        logger.info("Created config.json containing configurations");
       } else {
-        console.log("Encountered an error creating './configs/config.json'! Error: " + err);
+        logger.error("Encountered an error creating './configs/config.json'! Error: " + err);
         process.exit(1);
       }
     });
@@ -138,10 +139,10 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
       //It does not exist, string the subreddits together and create the subreddit config file
       fs.writeFile("./configs/subreddits.txt", subreddits.join(), (err) => {
         if (err) {
-          console.log("Encountered an error creating './configs/subreddits.txt'! Error: " + err);
+          logger.error("Encountered an error creating './configs/subreddits.txt'! Error: " + err);
           process.exit(1);
         } else {
-          console.log("Created subreddits.txt containing a list of subreddits to read from.");
+          logger.info("Created subreddits.txt containing a list of subreddits to read from.");
         }
       });
     }
@@ -151,10 +152,10 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
       //It does note exist, create file to store user's custom caption
       fs.writeFile("./configs/customcaption.txt", "", (err) => {
         if (err) {
-          console.log("Encountered an error creating './configs/customcaption.txt'! Error: " + err);
+          logger.error("Encountered an error creating './configs/customcaption.txt'! Error: " + err);
           process.exit(1);
         } else {
-          console.log("Created missing file: ./configs/customcaption.txt");
+          logger.info("Created missing file: ./configs/customcaption.txt");
         }
       });
     }
@@ -165,7 +166,7 @@ async function createConfigs(subreddits, logindetails, postProcessConfig, snoope
       if (fs.existsSync("./configs/customcaption.txt") && fs.existsSync("./configs/config.json") && fs.existsSync("./configs/subreddits.txt")) {
         resolve(true);
       } else {
-        console.log("There was a problem creating the config files. The bot will now exit.");
+        logger.info("There was a problem creating the config files. The bot will now exit.");
         process.exit(1);
       }
     }, 1000);
@@ -343,7 +344,7 @@ function setupPostProcessing(rl) {
     //Check if account credential file exists
     if (!fs.existsSync("./configs/config.json")) {
       //If no, perform first time setup
-      console.log("Performing first time setup");
+      logger.info("Performing first time setup");
 
       //Hook to console
       const rl = readline.createInterface({
@@ -366,7 +367,7 @@ function setupPostProcessing(rl) {
         process.exit(0);
       }
 
-      //User wants automatic configuration
+      //-- User wants automatic configuration, begin setup process --//
       //Request for user's Instagram login details
       const logindetails = await setupInstagram(rl);
 
@@ -386,16 +387,19 @@ function setupPostProcessing(rl) {
       //Creates remaining configuration files
       if (!await createConfigs(subreddits, logindetails, postProcessConfig, snooperConfig)) {
         //An error has occurred
-        reject("An unknown error has occurred while performing automatic setup.");
+        logger.error("An unknown error has occurred while performing automatic setup.");
+        reject();
       }
 
       //Setup complete, end readline
       rl.close();
-      resolve("Setup complete. Booting!");
+      logger.info("Setup complete. Booting!");
     } else {
       //No setup is required, all prerequisites are present
-      resolve("Prerequisites present, booting!");
+      logger.info("Prerequisites present, booting!");
     }
+
+    resolve();
   });
 }
 

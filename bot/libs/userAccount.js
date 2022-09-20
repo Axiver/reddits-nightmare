@@ -2,6 +2,7 @@
 const { IgCheckpointError, IgLoginBadPasswordError, IgChallengeWrongCodeError } = require("instagram-private-api");
 const Bluebird = require("bluebird");
 const fs = require("fs");
+const logger = require("./logger")("Instagram");
 
 //-- Global Declarations --//
 const cookieLocation = "./cookies/session.json";
@@ -20,7 +21,7 @@ function saveSession(ig) {
     //Saves the cookie to disk
     fs.writeFile(cookieLocation, JSON.stringify(cookie), (err, result) => {
       if (err)
-        console.log("There was an error while saving session data: " + err);
+        logger.error("There was an error while saving session data: " + err);
     });
 
     resolve();
@@ -69,7 +70,7 @@ async function solveChallenge(ig) {
         ig.request.end$.subscribe(async () => {
           await saveSession(ig);
         });
-        console.log("Successfully logged in to Instagram!");
+        logger.info("Successfully logged in to Instagram!");
         resolve();
       }
     }).catch(IgChallengeWrongCodeError, async () => {
@@ -108,7 +109,7 @@ async function login(username, password, ig) {
         });
 
         //Login successful
-        console.log("Successfully logged in to Instagram!");
+        logger.info("Successfully logged in to Instagram!");
         resolve();
       } else {
         //Attempt to relogin
@@ -127,7 +128,7 @@ async function login(username, password, ig) {
           ig.request.end$.subscribe(async () => {
             await saveSession(ig);
           });
-          console.log("Successfully logged in to Instagram!");
+          logger.info("Successfully logged in to Instagram!");
           resolve();
         }
 
@@ -144,7 +145,7 @@ async function login(username, password, ig) {
           configs["insta_password"] = retryPassword;
           fs.writeFile("./configs/config.json", JSON.stringify(configs), (err) => {
             if (err)
-              console.log("There was an error while trying to update config.json with the new password: " + err);
+              logger.error("There was an error while trying to update config.json with the new password: " + err);
           });
         }
 
@@ -157,7 +158,7 @@ async function login(username, password, ig) {
          * In the event that this does not work, please open a new issue at https://github.com/Garlicvideos/reddits-nightmare/issues/new
          */
         //Instagram wants us to prove that we are human
-        console.log("Human verification received from Instagram! Solving challenge...");
+        logger.info("Human verification received from Instagram! Solving challenge...");
 
         //Initiates the challenge
         await Bluebird.try(async () => {

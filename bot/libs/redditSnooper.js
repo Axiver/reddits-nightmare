@@ -2,6 +2,7 @@
 const fs = require("fs");
 const request = require("request");
 const cliProgress = require('cli-progress');
+const logger = require("./logger")("Snooper");
 
 //Initialize reddit api library
 const Snooper = require("reddit-snooper");
@@ -12,7 +13,7 @@ const snooper = new Snooper({
 
 //Import utility functions and libs
 const { formatFileName } = require("./image");
-const { isImage } = require("../utils/index");
+const { isImage } = require("../utils/imageUtils");
 
 //-- Functions --//
 /**
@@ -29,7 +30,7 @@ function fixSubreddits(subreddits) {
     const result = subreddits.filter((subreddit) => {
       //Removes any subreddit that does not meet the 2 character minimum
       if (subreddit.length < 2) {
-        console.log("Found a subreddit that does not reach the 2 character minimum, fixing...");
+        logger.info("Found a subreddit that does not reach the 2 character minimum, fixing...");
         return false;
       }
 
@@ -56,11 +57,11 @@ function stringSubreddits() {
     //Check if the subreddit list exists
     if (!fs.existsSync("./configs/subreddits.txt")) {
       //Subreddit list does not exist
-      console.log("Subreddit config file does not exist, defaulting to r/all.");
+      logger.warn("Subreddit config file does not exist, defaulting to r/all.");
       
       //Create the list with r/all as the subreddit
       fs.writeFile("./configs/subreddits.txt", "all", () => {
-        console.log("Created missing file 'subreddits.txt' in './configs'");
+        logger.info("Created missing file 'subreddits.txt' in './configs'");
       });
 
       //Resolve with the result
@@ -72,7 +73,7 @@ function stringSubreddits() {
       //Checks if there was any error reading the file
       if (err) {
         //There was an error reading the file, default to r/all
-        console.log("An error occurred while reading file 'subreddits.txt' in './configs', defaulting to r/all");
+        logger.error("An error occurred while reading file 'subreddits.txt' in './configs', defaulting to r/all");
         fs.writeFile("./configs/subreddits.txt", "all", () => {});
         return resolve(["all"]);
       }
@@ -81,7 +82,7 @@ function stringSubreddits() {
       if (data.length === 0) {
         //The file is empty, default to r/all
         data = "all";
-        console.log("Subreddit list is empty, defaulting to r/all.");
+        logger.warn("Subreddit list is empty, defaulting to r/all.");
         fs.writeFile("./configs/subreddits.txt", "all", () => {});
         return resolve(["all"]);
       }
@@ -94,7 +95,7 @@ function stringSubreddits() {
       if (content.join() !== subreddits.join()) {
         //The file was broken and it has been fixed
         fs.writeFile("./configs/subreddits.txt", content, () => {
-          console.log("Fixed the subreddit list");
+          logger.info("Fixed the subreddit list");
         });
       }
 
@@ -126,6 +127,8 @@ async function download(url, postTitle, nsfw) {
     //If the file already exists, it means that it was downloaded before, thus it will not download again.
     if (!fs.existsSync(filepath)) {
       //-- The file has never been downloaded before, download it --//
+      logger.verbose(`Downloading '${postTitle}' from ${url} to ${filepath}`);
+
       //Open a write stream to the target path
       const filetoPipe = fs.createWriteStream(filepath);
 
@@ -165,7 +168,7 @@ async function download(url, postTitle, nsfw) {
 
             //Stop the progress bar
             progressBar.stop();
-            console.log("Downloaded: " + postTitle);
+            logger.info(`Downloaded '${postTitle}'`);
           });
       });
     }
@@ -183,7 +186,6 @@ async function snoopReddit() {
   let options = {
     listing: configs.sort, // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: configs.top, // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
-
   };
 
   //Reformat the subreddit list
@@ -205,7 +207,7 @@ async function snoopReddit() {
         download(postUrl, postTitle, nsfw);
       }
     })
-    .on("error", console.error);
+    .on("error", logger.error);
 }
 
 module.exports = {
