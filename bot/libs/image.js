@@ -161,17 +161,11 @@ function parseImage(imagePath) {
       //-- Image does not meet the allowed width, attempt to resize it --//
       //Check if the image is closer to the lower limit
       if (allowedRatios.width.lowerLimit - image.info.width >= image.info.width - allowedRatios.width.upperLimit) {
-        //The image is closer to the lower limit, calculate the height to resize to
-        const newHeight = Math.floor((allowedRatios.width.lowerLimit / image.info.width) * image.info.height);
-
-        //Resize the image
-        image = await sharp(image.data).resize(allowedRatios.width.lowerLimit, newHeight).toBuffer({resolveWithObject: true});
+        //The image is closer to the lower limit, resize it to match
+        image = await sharp(image.data).resize({ width: allowedRatios.width.lowerLimit}).toBuffer({resolveWithObject: true});
       } else {
-        //The image is closer to the upper limit, calculate the height to resize to
-        const newHeight = Math.floor(image.info.height / (image.info.width / allowedRatios.width.upperLimit));
- 
-        //Resize the image
-        image = await sharp(image.data).resize(allowedRatios.width.upperLimit, newHeight).toBuffer({resolveWithObject: true});
+        //The image is closer to the upper limit, resize it to match
+        image = await sharp(image.data).resize({ width: allowedRatios.width.upperLimit}).toBuffer({resolveWithObject: true});
       }
     }
 
@@ -180,21 +174,29 @@ function parseImage(imagePath) {
      */
     //Check if the image fits the allowed height
     if (image.info.height < allowedRatios.height.lowerLimit || image.info.height > allowedRatios.height.upperLimit) {
-      //-- Image does not meet the allowed height, attempt to trim it --//
+      //-- Image does not meet the allowed height, attempt to trim/letterbox it --//
       //Check if the image is closer to the lower limit
       if (allowedRatios.height.lowerLimit - image.info.height >= image.info.height - allowedRatios.height.upperLimit) {
         //The image is closer to the lower limit, calculate the width to resize to
         const newWidth = Math.floor((allowedRatios.height.lowerLimit / image.info.height) * image.info.width);
 
-        //Crop the image (Vertically and horizontally anchored)
-        image = await sharp(image.data).resize(newWidth, allowedRatios.height.lowerLimit).toBuffer({resolveWithObject: true});
-      } else {
-        //-- The image is closer to the upper limit, crop the image --//
-        //Calculate the amount of height that needs to be cropped out of the image
-        const excessHeight = image.info.height - allowedRatios.height.upperLimit;
+        //Check if the newly calculated width exceeds the maximum acceptable width
+        if (newWidth > allowedRatios.width.upperLimit) {
+          //The newly calculated width exceeds the maximum allowed
+          //Resize the image to the max width
+          const resizedImage = await sharp(image.data).resize({ width: allowedRatios.width.upperLimit }).toBuffer({resolveWithObject: true});
 
-        //Crop the image (Vertically and horizontally anchored)
-        image = await sharp(image.data).extract({ left: 0, top: Math.floor(excessHeight / 2), width: image.info.width, height: allowedRatios.height.upperLimit }).toBuffer({resolveWithObject: true});
+          //-- Add blurred borders to the side of the image --//
+          //Generate a blurred image and overlay the resized image on top of it
+          image = await sharp(image.data).resize({ width: resizedImage.info.width, height: resizedImage.info.width }).blur(400).composite([{input: resizedImage.data, gravity: "center"}]).toBuffer({resolveWithObject: true});
+        } else {
+          //The newly calculated width is ok
+          //Resize the image
+          image = await sharp(image.data).resize(newWidth, allowedRatios.height.lowerLimit).toBuffer({resolveWithObject: true});
+        }
+      } else {
+        //The image is closer to the upper limit, crop the image (Vertically and horizontally anchored)
+        image = await sharp(image.data).resize(image.info.width, allowedRatios.height.upperLimit).toBuffer({resolveWithObject: true});
       }
     }
 

@@ -54,13 +54,13 @@ async function start() {
   await login(configs["insta_username"], insta_password, ig);
 
   //Activates reddit crawler
-  snoopReddit();
+  //snoopReddit();
 
   //-- Upload every (25) minutes --//
   //You may change the upload frequency if you wish. (The number below is in milliseconds)
   setInterval(() => { chooseInstaPhoto(ig) }, 1.5e6);
 
-  //chooseInstaPhoto(ig);
+  chooseInstaPhoto(ig);
 }
 
 //Activates the bot
