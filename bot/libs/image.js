@@ -19,7 +19,7 @@ const { replaceSpecialChars, contains, capitalizeFirstLetter } = require("../uti
 function formatFileName(postTitle, postUrl, nsfw) {
   return new Promise(async (resolve, reject) => {
     //Define an array of forbidden words
-    const forbiddenWords = ["reddit ", "r/ ", "comments ", "upvote ", "downvote ", "retweet ", "mods ", "me ", "i ", "my "];
+    const forbiddenWords = ["reddit", "r/", "comments", "upvote", "downvote", "retweet", "mods", "me", "i", "my", "i've"];
 
     //Reformats the filename so that it complies with window's strict filesystem rules
     postTitle = replaceSpecialChars(postTitle);

@@ -7,13 +7,17 @@
  */
 function contains(string, pattern) {
   //Loops through the string array
-  pattern.forEach((word) => {
-    //Checks if the string contains the current element
-    if (string.includes(word)) {
+  for (const word of pattern) {
+    //-- Checks if the string contains the current element --//
+    //Construct a regular expression
+    const regex = new RegExp(`\\b${word}\\b`, "i")
+
+    //Perform the check
+    if (string.match(regex)) {
       //The string contains the current element
       return true;
     }
-  });
+  };
 
   //The string does not contain any of the elements in the array
   return false;
