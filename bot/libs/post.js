@@ -1,10 +1,11 @@
 //-- Import required libraries --//
 const WordPOS = require("wordpos");
 const fs = require("fs");
+const logger = require("./logger")("Instagram");
 
 //Import utility functions and libs
 const { parseImage, ocr } = require("../libs/image");
-const { restoreSpecialCharacters } = require("../utils/index");
+const { restoreSpecialCharacters } = require("../utils/stringUtils");
 
 //-- Functions --//
 /**
@@ -148,24 +149,24 @@ async function postToInsta(image, filename, caption, ig) {
     //Checks if the image upload was successful
     if (result.status == "ok") {
       //The image upload was a success
-      console.log("Uploaded image '" + caption + "' to Instagram.");
+      logger.info("Uploaded image '" + caption + "' to Instagram.");
 
       //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
       fs.rename(imagePath, "./assets/images/uploaded/" + filename, (err) => {
         if (err)
-          console.log("There was an error while trying to mark the image as uploaded: " + err);
+          logger.error("There was an error while trying to mark the image as uploaded: " + err);
         else
-          console.log("Image has been marked as uploaded!");
+          logger.info("Image has been marked as uploaded!");
       });
     }
   }).catch((err) => {
     //An error occurred
-    console.log("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
+    logger.error("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
     fs.rename(imagePath, "./assets/images/error/" + filename, (err) => {
       if (err)
-        console.log("There was an error while trying to unapprove the image: " + err);
+        logger.error("There was an error while trying to unapprove the image: " + err);
       else
-        console.log("The image has been unapproved.");
+        logger.info("The image has been unapproved.");
     });
   });
 }
@@ -182,7 +183,7 @@ async function postToInsta(image, filename, caption, ig) {
   //Checks if there are any images to upload
   if (files.length === 0) {
     //There are no images to upload
-    console.log("No images to upload to instagram!");
+    logger.info("No images to upload to instagram!");
     return;
   }
 
@@ -192,7 +193,7 @@ async function postToInsta(image, filename, caption, ig) {
 
   //Changes the caption from filesystem format back to human readable format
   const caption = restoreSpecialCharacters(fileName);
-  console.log("Uploading post with caption: " + caption);
+  logger.info("Uploading post with caption: " + caption);
 
   //Parses the image such that it will fit instagram's allowed aspect ratio
   const parsedImage = await parseImage(filePath);
@@ -200,14 +201,14 @@ async function postToInsta(image, filename, caption, ig) {
   //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
   if (!parsedImage) {
     //The aspect ratio is unacceptable
-    console.log("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
+    logger.error("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
     fs.rename(filePath, "./assets/images/error/" + fileName, (err) => {
       if (err)
-        console.log("Error encountered while unapproving image: " + err);
+      logger.error("Error encountered while unapproving image: " + err);
     });
 
     //Upload another image by repeating the process
-    console.log("Uploading a different image...");
+    logger.info("Uploading a different image...");
     chooseInstaPhoto(ig);
     return;
   }

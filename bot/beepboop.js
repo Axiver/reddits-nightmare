@@ -5,7 +5,7 @@ const { IgApiClient } = require("instagram-private-api");
 const ig = new IgApiClient();
 
 //Import utility functions and libs
-const { makeDirs, setup, login, snoopReddit, askQuestion, chooseInstaPhoto } = require("./libs/index");
+const { makeDirs, setup, login, snoopReddit, askQuestion, chooseInstaPhoto } = require("./libs/");
 
 //-- Functions --//
 async function start() {
@@ -14,6 +14,7 @@ async function start() {
   const directories = [
     "./configs",
     "./cookies",
+    "./logs",
     {
       "./assets": [
         {
@@ -33,7 +34,7 @@ async function start() {
   await makeDirs(directories, "");
 
   //Perform first time setup if required
-  console.log(await setup());
+  await setup();
 
   //-- Login to Instagram --//
   //Load config file
@@ -54,13 +55,13 @@ async function start() {
   await login(configs["insta_username"], insta_password, ig);
 
   //Activates reddit crawler
-  //snoopReddit();
+  snoopReddit();
 
   //-- Upload every (25) minutes --//
   //You may change the upload frequency if you wish. (The number below is in milliseconds)
   setInterval(() => { chooseInstaPhoto(ig) }, 1.5e6);
 
-  chooseInstaPhoto(ig);
+  //chooseInstaPhoto(ig);
 }
 
 //Activates the bot

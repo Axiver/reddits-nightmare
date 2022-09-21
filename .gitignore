@@ -6,4 +6,6 @@
 /bot/configs/
 /bot/eng.traineddata
 /bot/test.js
+/bot/logs/*
 .DS_Store
+*.log

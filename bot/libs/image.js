@@ -18,6 +18,9 @@ const { replaceSpecialChars, contains, capitalizeFirstLetter } = require("../uti
  */
 function formatFileName(postTitle, postUrl, nsfw) {
   return new Promise(async (resolve, reject) => {
+    //Initialise logger
+    const logger = require("./logger")("Snooper");
+
     //Define an array of forbidden words
     const forbiddenWords = ["reddit", "r/", "comments", "upvote", "downvote", "retweet", "mods", "me", "i", "my", "i've"];
 
@@ -31,7 +34,7 @@ function formatFileName(postTitle, postUrl, nsfw) {
     //Checks if post is NSFW
     if (nsfw) {
       //The post is NSFW
-      console.log("Found a potentially NSFW post (Will require manual approval): " + postTitle);
+      logger.info("Found a potentially NSFW post (Will require manual approval): " + postTitle);
       filename = "./assets/images/nsfw/" + postTitle + path.extname(postUrl);
       return resolve(filename);
     }
@@ -39,7 +42,7 @@ function formatFileName(postTitle, postUrl, nsfw) {
     //Checks if the post contains words in the forbidden list
     if (contains(postTitle, forbiddenWords)) {
       //The post contains forbidden words
-      console.log("Image: " + postTitle + " is rejected due to the title having reddit related words");
+      logger.info("Image: " + postTitle + " is rejected due to the title having reddit related words");
       filename = "./assets/images/rejected/" + postTitle + path.extname(postUrl);
       return resolve(filename);
     }
@@ -72,12 +75,15 @@ function formatFileName(postTitle, postUrl, nsfw) {
  function ocr(imagePath) {
   return new Promise(async (resolve, reject) => {
     //-- Creates a new progress bar in CLI --//
+    //Initialise logger
+    const logger = require("./logger")("OCR");
+
     //Derives the name of the file to be processed
     const fileName = path.basename(imagePath);
 
     //Creates the bar
     const progressBar = new cliProgress.SingleBar({
-      format: `[OCR] Processing '${fileName}' | {status} |{bar}| {percentage}%`,
+      format: `[${new Date().toISOString()}] [OCR] Info : Processing '${fileName}' | {status} |{bar}| {percentage}%`,
       barCompleteChar: '\u2588',
       barIncompleteChar: '\u2591',
       hideCursor: true,
@@ -119,7 +125,7 @@ function formatFileName(postTitle, postUrl, nsfw) {
     progressBar.stop();
 
     //Print OCR complete log
-    console.log(`[OCR] Processed '${fileName}'`);
+    logger.info(`Processed '${fileName}'`);
 
     //Resolve with the result
     resolve(text);
