@@ -9,7 +9,7 @@ const path = require("path");
  */
  function isImage(url) {
   //Defines accepted image extensions
-  const imageExts = [".jpg", ".jpeg"];
+  const imageExts = [".png", ".jpg", ".jpeg"];
   
   //Derives the extension of the file (if any) from the url
   const extension = path.extname(url);
