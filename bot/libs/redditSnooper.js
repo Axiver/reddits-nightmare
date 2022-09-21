@@ -13,7 +13,7 @@ const snooper = new Snooper({
 
 //Import utility functions and libs
 const { formatFileName } = require("./image");
-const { isImage } = require("../utils/imageUtils");
+const { isImage } = require("../utils/fileUtils");
 
 //-- Functions --//
 /**
@@ -200,7 +200,7 @@ async function snoopReddit() {
     .getListingWatcher(subreddits, options)
     .on("item", (item) => {
       //If post is a image and has a supported file format
-      if ((item.kind = "t3" && isImage(item.data.url))) {
+      if (item.kind == "t3" && isImage(item.data.url)) {
         //Retrieves information about the post
         const postUrl = item.data.url;
         const postTitle = item.data.title;
@@ -209,6 +209,7 @@ async function snoopReddit() {
 
         //Downloads the post
         download(postUrl, postTitle, nsfw);
+        return;
       }
     })
     .on("error", logger.error);

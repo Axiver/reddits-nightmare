@@ -18,6 +18,23 @@ const path = require("path");
   return imageExts.includes(extension);
 }
 
+/**
+ * Checks a url to determine whether or not it points to a video
+ * @param {string} url The url to check
+ * @returns Whether or the url points to a video
+ */
+ function isVideo(url) {
+  //Defines accepted video extensions
+  const videoExts = [".mp4", ".gif"];
+  
+  //Derives the extension of the file (if any) from the url
+  const extension = path.extname(url);
+
+  //Determines whether or not the url leads to a video and returns the result
+  return videoExts.includes(extension);
+}
+
 module.exports = {
-  isImage
+  isImage,
+  isVideo
 };
