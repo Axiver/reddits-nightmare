@@ -205,7 +205,7 @@ async function snoopReddit() {
         const postUrl = item.data.url;
         const postTitle = item.data.title;
         const postID = item.data.id;
-        const nsfw = item.data.over18;
+        const nsfw = item.data.over_18;
 
         //Downloads the post
         download(postUrl, postTitle, nsfw);
