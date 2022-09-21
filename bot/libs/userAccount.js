@@ -4,6 +4,9 @@ const Bluebird = require("bluebird");
 const fs = require("fs");
 const logger = require("./logger")("Instagram");
 
+//Import utility functions and libs
+const { askQuestion } = require("./setup");
+
 //-- Global Declarations --//
 const cookieLocation = "./cookies/session.json";
 
@@ -140,9 +143,9 @@ async function login(username, password, ig) {
 
         //-- Save the correct one to config.json if "Remember me" is enabled --//
         //Check if the user enabled "Remember me"
-        if (configs["insta_password"]) {
+        if (configs.instagram["insta_password"]) {
           //"Remember me" is enabled, update the saved password
-          configs["insta_password"] = retryPassword;
+          configs.instagram["insta_password"] = retryPassword;
           fs.writeFile("./configs/config.json", JSON.stringify(configs), (err) => {
             if (err)
               logger.error("There was an error while trying to update config.json with the new password: " + err);

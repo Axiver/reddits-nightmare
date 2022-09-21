@@ -249,19 +249,30 @@ function setupInstagram(rl) {
     const rememberMe = answer.toLowerCase();
     
     //Checks for a valid response
-    if (rememberMe != "y" && rememberMe != "yes") {
-      //User does not want the "Remember Me" feature
-      //Resolve and return early
-      resolve(settings);
-      return;
+    if (rememberMe == "y" || rememberMe == "yes") {
+      //The user wants the "Remember Me" feature
+      //Asks the user for their password
+      const password = await askQuestion('\nWhat is the password associated with Instagram account "' + settings["insta_username"] + '"?\n', rl);
+      
+      //Saves the password to the settings object
+      settings["insta_password"] = password;
     }
 
-    //The user wants the "Remember Me" feature
-    //Asks the user for their password
-    const password = await askQuestion('\nWhat is the password associated with Instagram account "' + settings["insta_username"] + '"?\n', rl);
-    
-    //Saves the password to the settings object
-    settings["insta_password"] = password;
+    //-- Configures the upload frequency --//
+    //Asks the user how often they'd like the bot to upload to instagram
+    const frequency = await askQuestion("\nHow often (in milliseconds) would you like the bot to upload to Instagram? (Cannot be faster than once every minute) (Defaults to once every 25 minutes aka 1.5e+6 or 1500000)\n");
+
+    //Checks for an invalid response
+    if (Number.isNaN(frequency) || frequency < 60 * 1000) {
+      //The interval provided is invalid, default to once every 25 mins
+      console.log("Invalid response received, defaulting to 1.5e+6.");
+
+      //Save to settings object
+      settings["frequency"] = 1.5e+6;
+    } else {
+      //A valid response was received, save the frequency to the settings object
+      settings["frequency"] = frequency;
+    }
     
     //Resolves with the result
     resolve(settings);

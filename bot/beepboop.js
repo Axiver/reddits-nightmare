@@ -1,5 +1,6 @@
 //-- Import required libraries --//
 const { IgApiClient } = require("instagram-private-api");
+const logger = require("./libs/logger")("Instagram");
 
 //Initialise IG API client
 const ig = new IgApiClient();
@@ -8,6 +9,31 @@ const ig = new IgApiClient();
 const { makeDirs, setup, login, snoopReddit, askQuestion, chooseInstaPhoto } = require("./libs/");
 
 //-- Functions --//
+/**
+ * Retrieves the configured upload frequency
+ * @param {object} configs Config data
+ */
+function getUploadFrequency(configs) {
+  //Retrieve upload frequency from configs
+  const frequency = configs["frequency"];
+
+  //Check if a valid upload frequency is configured
+  if (Number.isNaN(frequency)) {
+    //Invalid frequency configured
+    logger.warn("Invalid upload frequency configured, defaulting to once every 25 mins");
+    return 1.5e+6;
+  }
+
+  //Check if the upload frequency configured is less than a minute
+  if (frequency < 60 * 1000) {
+    //Upload frequency is too short
+    logger.warn("Configured upload frequency is too short (must be > 1 min), defaulting to once every 25 mins");
+    return 1.5e+6;
+  }
+
+  return frequency;
+}
+
 async function start() {
   //-- Fail-safe checks --//
   //List of needed directories
@@ -58,10 +84,16 @@ async function start() {
   snoopReddit();
 
   //-- Upload every (25) minutes --//
-  //You may change the upload frequency if you wish. (The number below is in milliseconds)
-  setInterval(() => { chooseInstaPhoto(ig) }, 1.5e6);
+  //Retrieve the configured upload frequency
+  const frequency = getUploadFrequency(configs);
+  logger.info(`Uploading with a frequency of every ${frequency}ms`);
 
-  //chooseInstaPhoto(ig);
+  //You may change the upload frequency if you wish. (The number below is in milliseconds)
+  setInterval(() => { 
+    chooseInstaPhoto(ig) 
+  }, frequency);
+
+  chooseInstaPhoto(ig);
 }
 
 //Activates the bot
