@@ -116,7 +116,8 @@ async function login(username, password, ig) {
         resolve();
       } else {
         //Attempt to relogin
-        login(username, password, ig);
+        await login(username, password, ig);
+        resolve();
       }
     } else {
       //-- Unable to login via cookie, attempt logging in via username and password --//
@@ -153,7 +154,7 @@ async function login(username, password, ig) {
         }
 
         //-- Attempt to relogin --//
-        login(username, retryPassword, ig);
+        await login(username, retryPassword, ig);
         resolve();
       }).catch(IgCheckpointError, async () => {
         /**
