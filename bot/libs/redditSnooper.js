@@ -13,7 +13,7 @@ const snooper = new Snooper({
 
 //Import utility functions and libs
 const { formatFileName } = require("./image");
-const { isImage } = require("../utils/fileUtils");
+const { isImage, isVideo } = require("../utils/fileUtils");
 
 //-- Functions --//
 /**
@@ -199,8 +199,12 @@ async function snoopReddit() {
   snooper.watcher
     .getListingWatcher(subreddits, options)
     .on("item", (item) => {
-      //If post is a image and has a supported file format
-      if (item.kind == "t3" && isImage(item.data.url)) {
+      //Check if post is stickied
+      if (item.data.stickied)
+        return;
+
+      //If post is a image/video and has a supported file format
+      if (item.kind === "t3" && (isImage(item.data.url) || isVideo(item.data.url))) {
         //Retrieves information about the post
         const postUrl = item.data.url;
         const postTitle = item.data.title;

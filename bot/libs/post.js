@@ -6,6 +6,7 @@ const logger = require("./logger")("Instagram");
 //Import utility functions and libs
 const { parseImage, ocr } = require("../libs/image");
 const { restoreSpecialCharacters } = require("../utils/stringUtils");
+const { isImage, isVideo } = require("../utils/fileUtils");
 
 //-- Functions --//
 /**
@@ -81,7 +82,7 @@ function generateHashtags(imagePath, string) {
     let ocrText = "";
     if (configs["ocr"] == "yes") {
       //Perform OCR on the image
-      ocrText = await ocr(imagePath);
+      //ocrText = await ocr(imagePath);
     }
 
     //Combine OCR text with string provided
@@ -140,39 +141,82 @@ async function postToInsta(image, filename, caption, ig) {
   const customcaption = await getCustomCaption();
   const finalCaption = caption + customcaption + "\n\n\n" + hashtags;
 
-  //Uploads the image to Instagram
-  await ig.publish.photo({
-    //Reads the file into buffer before uploading
-    file: image,
-    caption: finalCaption,
-  }).then((result) => {
-    //Checks if the image upload was successful
-    if (result.status == "ok") {
-      //The image upload was a success
-      logger.info("Uploaded image '" + caption + "' to Instagram.");
+  //-- Uploads the image/video --//
+  //Determines the type of the file we are uploading
+  if (isImage(filename)) {
+    //We are uploading an image
+    //Uploads the image to Instagram
+    await ig.publish.photo({
+      //Reads the file into buffer before uploading
+      file: image,
+      caption: finalCaption,
+    }).then((result) => {
+      //Checks if the image upload was successful
+      if (result.status == "ok") {
+        //The image upload was a success
+        logger.info("Uploaded image '" + caption + "' to Instagram.");
 
-      //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
-      fs.rename(imagePath, "./assets/images/uploaded/" + filename, (err) => {
+        //Ensures that the same image does not get reuploaded twice by moving it to the uploaded dir
+        fs.rename(imagePath, "./assets/images/uploaded/" + filename, (err) => {
+          if (err)
+            logger.error("There was an error while trying to mark the image as uploaded: " + err);
+          else
+            logger.info("Image has been marked as uploaded!");
+        });
+      }
+    }).catch((err) => {
+      //An error occurred
+      logger.error("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
+      fs.rename(imagePath, "./assets/images/error/" + filename, (err) => {
         if (err)
-          logger.error("There was an error while trying to mark the image as uploaded: " + err);
+          logger.error("There was an error while trying to unapprove the image: " + err);
         else
-          logger.info("Image has been marked as uploaded!");
+          logger.info("The image has been unapproved.");
       });
-    }
-  }).catch((err) => {
-    //An error occurred
-    logger.error("There was a problem uploading the Image to Instagram (Did they detect us as a bot?): " + err);
-    fs.rename(imagePath, "./assets/images/error/" + filename, (err) => {
-      if (err)
-        logger.error("There was an error while trying to unapprove the image: " + err);
-      else
-        logger.info("The image has been unapproved.");
     });
-  });
+  }
+
+  //Checks if the file being uploaded is a video
+  if (isVideo(filename)) {
+    //We are uploading a video
+    //Get the cover photo
+    const coverPhoto = await parseImage("./assets/images/uploaded/woo.png");
+
+    //Uploads the video to Instagram
+    await ig.publish.video({
+      //Reads the file into buffer before uploading
+      video: image,
+      caption: finalCaption,
+      coverImage: coverPhoto,
+    }).then((result) => {
+      //Checks if the video upload was successful
+      if (result.status == "ok") {
+        //The video upload was a success
+        logger.info("Uploaded video '" + caption + "' to Instagram.");
+
+        //Ensures that the same video does not get reuploaded twice by moving it to the uploaded dir
+        fs.rename(imagePath, "./assets/images/uploaded/" + filename, (err) => {
+          if (err)
+            logger.error("There was an error while trying to mark the video as uploaded: " + err);
+          else
+            logger.info("Video has been marked as uploaded!");
+        });
+      }
+    }).catch((err) => {
+      //An error occurred
+      logger.error("There was a problem uploading the Video to Instagram (Did they detect us as a bot?): " + err);
+      fs.rename(imagePath, "./assets/images/error/" + filename, (err) => {
+        if (err)
+          logger.error("There was an error while trying to unapprove the video: " + err);
+        else
+          logger.info("The video has been unapproved.");
+      });
+    });
+  }
 }
 
 /**
- * Chooses an image to upload to Instagram
+ * Chooses an image or video to upload to Instagram
  * @returns Path of the image to upload
  * @param {Object} ig Instagram client
  */
@@ -182,8 +226,8 @@ async function postToInsta(image, filename, caption, ig) {
 
   //Checks if there are any images to upload
   if (files.length === 0) {
-    //There are no images to upload
-    logger.info("No images to upload to instagram!");
+    //There are no images nor videos to upload
+    logger.info("No images nor videos to upload to instagram!");
     return;
   }
 
@@ -195,26 +239,45 @@ async function postToInsta(image, filename, caption, ig) {
   const caption = restoreSpecialCharacters(fileName);
   logger.info("Uploading post with caption: " + caption);
 
-  //Parses the image such that it will fit instagram's allowed aspect ratio
-  const parsedImage = await parseImage(filePath);
+  //-- Determines if a photo or a video is being uploaded --//
+  //Checks if a photo is being uploaded
+  if (isImage(fileName)) {
+    //An image is being uploaded
+    //Parses the image such that it will fit instagram's allowed aspect ratio
+    const parsedImage = await parseImage(filePath);
 
-  //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
-  if (!parsedImage) {
-    //The aspect ratio is unacceptable
-    logger.error("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
-    fs.rename(filePath, "./assets/images/error/" + fileName, (err) => {
-      if (err)
-      logger.error("Error encountered while unapproving image: " + err);
+    //Checks if the image can be uploaded (Image matches allowed aspect ratio OR image could be resized to fit the allowed aspect ratio)
+    if (!parsedImage) {
+      //The aspect ratio is unacceptable
+      logger.error("Error encountered while uploading image: unapproving image due to an unacceptable aspect ratio");
+      fs.rename(filePath, "./assets/images/error/" + fileName, (err) => {
+        if (err)
+        logger.error("Error encountered while unapproving image: " + err);
+      });
+
+      //Upload another image by repeating the process
+      logger.info("Uploading a different image...");
+      chooseInstaPhoto(ig);
+      return;
+    }
+
+    //The aspect ratio is acceptable, upload the image
+    postToInsta(parsedImage, fileName, caption, ig);
+  }
+  
+  //Checks if a video is being uploaded
+  if (isVideo(fileName)) {
+    //A video is being uploaded
+    //Read the video to buffer
+    fs.readFile(filePath, (err, parsedVideo) => {
+      if (err) 
+        throw err;
+      
+      //The aspect ratio is acceptable, upload the video
+      postToInsta(parsedVideo, fileName, caption, ig);
     });
-
-    //Upload another image by repeating the process
-    logger.info("Uploading a different image...");
-    chooseInstaPhoto(ig);
-    return;
   }
 
-  //The aspect ratio is acceptable, upload the image
-  postToInsta(parsedImage, fileName, caption, ig);
   return;
 }
 

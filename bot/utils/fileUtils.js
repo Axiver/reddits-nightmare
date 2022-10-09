@@ -25,7 +25,7 @@ const path = require("path");
  */
  function isVideo(url) {
   //Defines accepted video extensions
-  const videoExts = [".mp4", ".gif"];
+  const videoExts = [".mp4", ".gif", ".gifv"];
   
   //Derives the extension of the file (if any) from the url
   const extension = path.extname(url);
