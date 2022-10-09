@@ -8,6 +8,10 @@ const { capitalizeFirstLetter: capitalFirst } = require("../utils/stringUtils");
 //-- Create Winston logger --//
 //Create the logging format
 const customFormat = printf(({ level, message, label = "General", timestamp }) => {
+  //Format the timestamp
+  timestamp = new Date(timestamp).toLocaleString();
+
+  //Return the logging format
   return `[${timestamp}] [${label}] ${level}: ${message}`;
 });
 
