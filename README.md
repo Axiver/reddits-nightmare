@@ -25,7 +25,7 @@ After downloading Nodejs, npm and the bot, `cd` into the directory you installed
 
 This is the method I recommend as there isn't a reason for you to be performing the installation manually **at all**.
 
-Run `npm run start` and the bot will perform first time setup. When the bot asks you if you want to use automated setup, type `y` or `yes`.
+Run `node beepboop.js` and the bot will perform first time setup. When the bot asks you if you want to use automated setup, type `y` or `yes`.
 
 It will then ask you several questions. To find out what these questions mean and their significance, as well as how to answer them correctly (The bot is almost fool-proof, but that doesn't mean it can't be broken), please go to the [config explanation page](https://github.com/Garlicvideos/reddits-nightmare/wiki/Configurations)
 
@@ -37,9 +37,9 @@ But maybe you're adventurous. Head on over to the [manual installation guide](ht
 
 #### Modification of files
 
-To add in your custom captions, open up `/configs/customcaption.txt` (or create the file, if it doesn't already exist,) and save your custom caption into the contents of the file.
+To add in your custom captions, open up `beepboop.js` and edit `var customcaption = "<caption>";`, replacing `<caption>` to anything of your liking.
 
-`config.json` and `subreddits.txt` is open for modification in case you entered any info wrongly.
+`account.json` and `subreddits.txt` is open for modification in case you entered any info wrongly.
 To fix either of the files, simply delete it and follow the steps [shown above here](#setup), for the file again.
 
 It is not recommended for you to manually modify the aforementioned files.
