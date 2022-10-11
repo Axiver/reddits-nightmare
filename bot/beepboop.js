@@ -93,7 +93,7 @@ async function start() {
     chooseInstaPhoto(ig) 
   }, frequency);
 
-  chooseInstaPhoto(ig);
+  //chooseInstaPhoto(ig);
 }
 
 //Activates the bot
