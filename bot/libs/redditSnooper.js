@@ -73,7 +73,7 @@ function stringSubreddits() {
       //Checks if there was any error reading the file
       if (err) {
         //There was an error reading the file, default to r/all
-        logger.error("An error occurred while reading file 'subreddits.txt' in './configs', defaulting to r/all");
+        logger.warn("An error occurred while reading file 'subreddits.txt' in './configs', defaulting to r/all");
         fs.writeFile("./configs/subreddits.txt", "all", () => {});
         return resolve(["all"]);
       }
