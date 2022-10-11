@@ -1,9 +1,11 @@
 /bot/node_modules
 /bot/cookies/gitgagged.json
 /bot/assets/images/*
-/bot/configs/account.json
+/bot/configs/config.json
 /bot/cookies/
 /bot/configs/
 /bot/eng.traineddata
 /bot/test.js
+/bot/logs/*
 .DS_Store
+*.log
