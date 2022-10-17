@@ -50,7 +50,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Authors
 
-* **Garlicvideos** - [Garlicvideos](https://github.com/Garlicvideos)
+* **Axiver** - [Axiver](https://github.com/Axiver)
 
 See also the list of [contributors](https://github.com/Garlicvideos/reddits-nightmare/contributors) who participated in this project.
 
@@ -60,4 +60,4 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE
 
 ## If you like what I do, please consider keeping me alive
 
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](http://paypal.me/Garlicvideos)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/XavierTeoZK)
