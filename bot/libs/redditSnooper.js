@@ -1,7 +1,7 @@
 //-- Import required libraries --//
 const fs = require("fs");
 const request = require("request");
-const cliProgress = require('cli-progress');
+const cliProgress = require("cli-progress");
 const logger = require("./logger")("Snooper");
 
 //Initialize reddit api library
@@ -58,7 +58,7 @@ function stringSubreddits() {
     if (!fs.existsSync("./configs/subreddits.txt")) {
       //Subreddit list does not exist
       logger.warn("Subreddit config file does not exist, defaulting to r/all.");
-      
+
       //Create the list with r/all as the subreddit
       fs.writeFile("./configs/subreddits.txt", "all", () => {
         logger.info("Created missing file 'subreddits.txt' in './configs'");
@@ -135,46 +135,48 @@ async function download(url, postTitle, nsfw) {
       //Creates a progress bar
       const progressBar = new cliProgress.SingleBar({
         format: `Downloading '${postTitle}' |{bar}| {percentage}% | {value}/{total} Chunks | Speed: {speed}`,
-        barCompleteChar: '\u2588',
-        barIncompleteChar: '\u2591',
+        barCompleteChar: "\u2588",
+        barIncompleteChar: "\u2591",
         hideCursor: true,
         clearOnComplete: true,
-        linewrap: true
+        linewrap: true,
       });
 
       //Initialises the bar
       progressBar.start(100, 0, {
-        speed: "N/A"
+        speed: "N/A",
       });
 
       //Download the image and pipe it to the file
-      filetoPipe.on("open", () => {
-        request(url)
-          .pipe(filetoPipe)
-          .on('response', (data) => {
-            //Retrieve the total number of chunks of the payload
-            const totalChunks = parseInt(data.headers['content-length']);
+      filetoPipe
+        .on("open", () => {
+          request(url)
+            .pipe(filetoPipe)
+            .on("response", (data) => {
+              //Retrieve the total number of chunks of the payload
+              const totalChunks = parseInt(data.headers["content-length"]);
 
-            //Start the progress bar
-            progressBar.start(totalChunks);
-          })
-          .on("data", (chunk) => {
-            //Update the progress bar on every chunk received
-            progressBar.increment(chunk.length);
-          })
-          .on("close", () => {
-            //Download complete, close pipe
-            filetoPipe.end();
+              //Start the progress bar
+              progressBar.start(totalChunks);
+            })
+            .on("data", (chunk) => {
+              //Update the progress bar on every chunk received
+              progressBar.increment(chunk.length);
+            })
+            .on("close", () => {
+              //Download complete, close pipe
+              filetoPipe.end();
 
-            //Stop the progress bar
-            progressBar.stop();
-            logger.info(`Downloaded '${postTitle}'`);
-          });
-      }).on('error', (err) => {
-        //Stop the progress bar
-        progressBar.stop();
-        logger.error(`Unable to download '${postTitle}': `, err);
-      });
+              //Stop the progress bar
+              progressBar.stop();
+              logger.info(`Downloaded '${postTitle}'`);
+            });
+        })
+        .on("error", (err) => {
+          //Stop the progress bar
+          progressBar.stop();
+          logger.error(`Unable to download '${postTitle}': `, err);
+        });
     }
   });
 }
@@ -211,9 +213,11 @@ async function snoopReddit() {
         download(postUrl, postTitle, nsfw);
       }
     })
-    .on("error", logger.error);
+    .on("error", (err) => {
+      logger.error(`Unable to scrape reddit: `, err);
+    });
 }
 
 module.exports = {
-  snoopReddit
-}
+  snoopReddit,
+};
