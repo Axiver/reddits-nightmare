@@ -2,10 +2,6 @@
 
 Don't you ever want to become the enemy of the people? [reddits-nightmare](https://github.com/Garlicvideos/reddits-nightmare) is a bot that downloads any post from any subreddit, along with the post's title, and reuploads it to Instagram, causing massive havoc and ruins relationships once your close friends or families find out.
 
-
-### The reddit scraping module is currently broken
-After reddit's API changes, the `reddit-snooper` package that the bot depends on is currently broken. As that package is no longer maintained by its original author, I will need to fork it and work on a fix, which would take a long time. Until then, you will have to manually download the posts from reddit and place them in `/assets/images/approved`. The bot will then upload the images to Instagram as usual.
-
 ## Getting started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See Installing for notes on how to deploy the project on a live system.
