@@ -197,30 +197,29 @@ async function snoopReddit() {
   //Reformat the subreddit list
   const subreddits = await stringSubreddits();
 
-  // This has been commented out as reddit-snooper was broken by the reddit API changes
   //Begins snooping
-  // snooper.watcher
-  //   .getListingWatcher(subreddits, options)
-  //   .on("item", (item) => {
-  //     //If post is a image and has a supported file format
-  //     if ((item.kind = "t3" && isImage(item.data.url))) {
-  //       //Retrieves information about the post
-  //       const postUrl = item.data.url;
-  //       const postTitle = item.data.title;
-  //       const postID = item.data.id;
-  //       const nsfw = item.data.over_18;
+  snooper.watcher
+    .getListingWatcher(subreddits, options)
+    .on("item", (item) => {
+      //If post is a image and has a supported file format
+      if ((item.kind = "t3" && isImage(item.data.url))) {
+        //Retrieves information about the post
+        const postUrl = item.data.url;
+        const postTitle = item.data.title;
+        const postID = item.data.id;
+        const nsfw = item.data.over_18;
 
-  //       //Downloads the post
-  //       download(postUrl, postTitle, nsfw);
-  //     }
-  //   })
-  //   .on("error", (err) => {
-  //     logger.error(`Unable to scrape reddit: `, err);
-  //   });
+        //Downloads the post
+        download(postUrl, postTitle, nsfw);
+      }
+    })
+    .on("error", (err) => {
+      logger.error(`Unable to scrape reddit: `, err);
+    });
 
-  logger.warn(
-    "The reddit snooper module has been disabled as it has been broken by the Reddit API changes. Please check the README for more information."
-  );
+  // logger.warn(
+  //   "The reddit snooper module has been disabled as it has been broken by the Reddit API changes. Please check the README for more information."
+  // );
 }
 
 module.exports = {
