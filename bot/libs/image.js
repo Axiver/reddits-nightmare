@@ -98,18 +98,13 @@ function formatFileName(postTitle, postUrl, nsfw) {
     });
     
     //-- Creates and configures OCR worker --//
-    const worker = createWorker({
+    const worker = await createWorker("eng", 1, {
       logger: (m) => { 
         progressBar.update(m.progress * 100, {
           status: capitalizeFirstLetter(m.status)
         });
       },
     });
-
-    //Load the worker and sets its language to english
-    await worker.load();
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
 
     //Perform OCR on the image
     const {
