@@ -46,13 +46,25 @@ function findSession() {
  */
 function loadSession() {
   /**
-   * require() path is relative to the current file
-   * However, the location of the cookie is provided relative to the file being ran (beepboop.js)
+   * require() path is relative to the file loading it, whereas fs is relative to the primary script
+   * The location of the cookie is provided relative to the file being ran (beepboop.js)
    * Therefore, we need to append a "." to the filepath because this file is in a sibling folder (/libs/) of /cookies/
    * :))))))))))))))
    */
   const session = require("." + cookieLocation);
   return session;
+}
+
+/**
+ * Deletes the session cookie
+ * @returns {void}
+ */
+function deleteSession() {
+  //Delete the session cookie
+  fs.unlink(cookieLocation, (err) => {
+    if (err)
+      logger.error("There was an error while deleting the session cookie: " + err);
+  });
 }
 
 /**
@@ -105,7 +117,8 @@ async function login(username, password, ig) {
       await ig.state.deserialize(loadSession());
 
       //Checks if the cookie was loaded successfully
-      if (ig.account) {
+      const user = await ig.account.currentUser();
+      if (user) {
         //Serialize session cookie (This gets invoked after every call to Instagram)
         ig.request.end$.subscribe(async () => {
           await saveSession(ig);
@@ -115,6 +128,9 @@ async function login(username, password, ig) {
         logger.info("Successfully logged in to Instagram!");
         resolve();
       } else {
+        //Delete the session cookie
+        // deleteSession();
+
         //Attempt to relogin
         await login(username, password, ig);
         resolve();
@@ -124,14 +140,19 @@ async function login(username, password, ig) {
       //Login procedure
       await Bluebird.try(async () => {
         //Execute usual requests in the android app, not required but reduces suspicion from Instagram
-        // XXX await ig.simulate.preLoginFlow();
+        // await ig.simulate.preLoginFlow();
 
         //Login
         if (await ig.account.login(username, password, ig)) {
-          //Serialize session cookie (This gets invoked after every call to Instagram)
+          //Create a new session cookie
+          await saveSession(ig);
+          
+          //Update session cookie after every request to Instagram
           ig.request.end$.subscribe(async () => {
             await saveSession(ig);
           });
+
+          //Login successful
           logger.info("Successfully logged in to Instagram!");
           resolve();
         }
